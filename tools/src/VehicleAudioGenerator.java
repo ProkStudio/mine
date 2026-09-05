@@ -61,7 +61,7 @@ public final class VehicleAudioGenerator {
                 System.out.println("PASS mono Vorbis decode: "+name+" samples="+SAMPLES+" sha256="+sha);
             }
             Files.writeString(root.resolve("manifest.json"),"{"+String.join(",",manifest)+"}\n");
-            Files.writeString(root.resolve("LICENSE.txt"),"Original synthesized Harvester audio, 2026. MIT, as the repository LICENSE. No sampled recordings. FFmpeg/JAVE are external build tools, not included in this mod.\n");
+            Files.writeString(root.resolve("LICENSE.txt"),"Original synthesized Harvester audio, 2026. CC0-1.0, as the repository LICENSE; https://creativecommons.org/publicdomain/zero/1.0/. No sampled recordings. FFmpeg/JAVE are external build tools, not included in this mod.\n");
         } finally {
             try(var walk=Files.walk(temp)) { for(Path p:walk.sorted(Comparator.reverseOrder()).toList()) Files.deleteIfExists(p); }
         }
