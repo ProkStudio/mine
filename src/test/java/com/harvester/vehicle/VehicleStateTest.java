@@ -1,68 +1,127 @@
 package com.harvester.vehicle;
 
-import com.mojang.serialization.DynamicOps;
-import net.minecraft.Bootstrap;
-import net.minecraft.SharedConstants;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.NbtComponent;
-import net.minecraft.item.*;
-import net.minecraft.nbt.*;
-import net.minecraft.registry.*;
-import net.minecraft.text.Text;
-import org.junit.jupiter.api.*;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.JsonOps;
+import org.junit.jupiter.api.Test;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Unit tests of the actual shared vehicle format, without Minecraft bootstrap.
+ * Cargo is an opaque JSON fixture, NOT an ItemStack mock claiming to test registries.
+ * Real ItemStack/NbtComponent integration is a separate in-game QA requirement.
+ */
 class VehicleStateTest {
-    private static DynamicOps<NbtElement> ops;
-    @BeforeAll static void bootstrap() {
-        SharedConstants.createGameVersion();
-        Bootstrap.initialize();
-        ops=DynamicRegistryManager.of(Registries.REGISTRIES).getOps(NbtOps.INSTANCE);
+    private static final Codec<JsonElement> CARGO_CODEC = Codec.PASSTHROUGH.xmap(
+            value -> value.convert(JsonOps.INSTANCE).getValue().deepCopy(),
+            value -> new Dynamic<>(JsonOps.INSTANCE, value.deepCopy()));
+
+    private static JsonObject cargo(String item, int count, String name) {
+        JsonObject stack = new JsonObject();
+        stack.addProperty("id", item);
+        stack.addProperty("count", count);
+        JsonObject components = new JsonObject();
+        components.addProperty("minecraft:custom_name", name);
+        JsonObject custom = new JsonObject();
+        custom.addProperty("marker", "retained-" + name);
+        components.add("minecraft:custom_data", custom);
+        stack.add("components", components);
+        return stack;
     }
+
+    private static JsonObject encode(VehicleStateCodec.State<JsonElement> state) {
+        return VehicleStateCodec.encode(JsonOps.INSTANCE, CARGO_CODEC, state).getAsJsonObject();
+    }
+
+    private static VehicleStateCodec.State<JsonElement> decode(JsonElement encoded) {
+        return VehicleStateCodec.decode(JsonOps.INSTANCE, CARGO_CODEC, encoded);
+    }
+
+    private static VehicleStateCodec.State<JsonElement> roundtrip(VehicleStateCodec.State<JsonElement> state) {
+        // Cross a serialization boundary; do not merely pass references to the decoder.
+        return decode(JsonParser.parseString(encode(state).toString()));
+    }
+
     @Test void fullCargoRoundtripRetainsComponentsAndEverySlot() {
-        List<ItemStack> cargo=new ArrayList<>();
-        for(int i=0;i<54;i++) {
-            ItemStack stack=new ItemStack(i%2==0?Items.WHEAT:Items.DIAMOND,64);
-            stack.set(DataComponentTypes.CUSTOM_NAME,Text.literal("Cargo "+i));
-            cargo.add(stack);
+        List<JsonElement> slots = new ArrayList<>();
+        for (int i = 0; i < 54; i++) {
+            slots.add(cargo(i % 2 == 0 ? "minecraft:wheat" : "minecraft:diamond", 64, "Cargo " + i));
         }
-        VehicleState original=new VehicleState(VehicleType.COMBINE_WIDE,1731,87,14,false,4,cargo);
-        NbtCompound saved=original.encode(ops);
-        // Same component container used by the pickup item, with a binary NBT codec roundtrip.
-        NbtComponent component=NbtComponent.of(saved);
-        NbtElement encoded=NbtComponent.CODEC.encodeStart(ops,component).getOrThrow();
-        NbtComponent restored=NbtComponent.CODEC.parse(ops,encoded).getOrThrow();
-        VehicleState result=VehicleState.decode(restored.copyNbt(),ops);
-        assertEquals(original.type(),result.type()); assertEquals(original.fuel(),result.fuel());
-        assertEquals(original.condition(),result.condition()); assertEquals(original.color(),result.color());
-        assertEquals(original.headerEnabled(),result.headerEnabled()); assertEquals(original.workCooldown(),result.workCooldown());
-        assertEquals(54,result.cargo().size());
-        for(int i=0;i<54;i++) {
-            assertTrue(ItemStack.areItemsAndComponentsEqual(original.cargo().get(i),result.cargo().get(i)));
-            assertEquals(64,result.cargo().get(i).getCount());
+        VehicleStateCodec.State<JsonElement> original = new VehicleStateCodec.State<>(
+                VehicleType.COMBINE_WIDE, 1731, 87, 14, false, 4, slots);
+        JsonObject wire = encode(original);
+        assertEquals(Set.of("Version", "Type", "Fuel", "Condition", "Color", "HeaderEnabled", "WorkCooldown", "Inventory"), wire.keySet());
+        assertEquals(1, wire.get("Version").getAsInt());
+        assertEquals("combine_wide", wire.get("Type").getAsString());
+        VehicleStateCodec.State<JsonElement> result = roundtrip(original);
+        assertEquals(original, result);
+        assertEquals(54, result.cargo().size());
+        for (int i = 0; i < 54; i++) {
+            assertEquals(slots.get(i), result.cargo().get(i));
+            assertEquals(64, result.cargo().get(i).getAsJsonObject().get("count").getAsInt());
+            assertEquals("retained-Cargo " + i, result.cargo().get(i).getAsJsonObject()
+                    .getAsJsonObject("components").getAsJsonObject("minecraft:custom_data").get("marker").getAsString());
         }
-        cargo.get(0).decrement(1);
-        assertEquals(64,result.cargo().get(0).getCount());
+        slots.get(0).getAsJsonObject().addProperty("count", 63);
+        assertEquals(64, result.cargo().get(0).getAsJsonObject().get("count").getAsInt());
+        slots.clear();
+        assertEquals(54, original.cargo().size());
     }
+
     @Test void emptySlotsAndBrokenConditionSurvive() {
-        VehicleState original=new VehicleState(VehicleType.DRONE,0,0,0,true,0,List.of(ItemStack.EMPTY,new ItemStack(Items.WHEAT,3),ItemStack.EMPTY));
-        VehicleState result=VehicleState.decode(original.encode(ops),ops);
-        assertTrue(result.cargo().get(0).isEmpty()); assertTrue(result.cargo().get(2).isEmpty());
-        assertEquals(3,result.cargo().get(1).getCount()); assertEquals(0,result.condition());
+        VehicleStateCodec.State<JsonElement> original = new VehicleStateCodec.State<>(
+                VehicleType.DRONE, 0, 0, 0, true, 0,
+                List.of(new JsonObject(), cargo("minecraft:wheat", 3, "Seed"), new JsonObject()));
+        VehicleStateCodec.State<JsonElement> result = roundtrip(original);
+        assertEquals(original, result);
+        assertEquals(3, result.cargo().size());
+        assertTrue(result.cargo().get(0).getAsJsonObject().entrySet().isEmpty());
+        assertTrue(result.cargo().get(2).getAsJsonObject().entrySet().isEmpty());
+        assertEquals(3, result.cargo().get(1).getAsJsonObject().get("count").getAsInt());
+        assertEquals(0, result.condition());
+        // Format-v1 defaults remain compatible with older partial records.
+        JsonObject legacy = new JsonObject();
+        legacy.addProperty("Type", "drone");
+        VehicleStateCodec.State<JsonElement> defaults = decode(legacy);
+        assertEquals(VehicleType.DRONE.durability, defaults.condition());
+        assertTrue(defaults.headerEnabled());
+        assertTrue(defaults.cargo().isEmpty());
     }
+
     @Test void rejectsUnknownSchemaAndType() {
-        NbtCompound n=new NbtCompound(); n.putInt("Version",999);
-        assertThrows(IllegalArgumentException.class,()->VehicleState.decode(n,ops));
-        n.putInt("Version",1); n.putString("Type","nonexistent");
-        assertThrows(IllegalArgumentException.class,()->VehicleState.decode(n,ops));
+        JsonObject bad = new JsonObject();
+        bad.addProperty("Version", 999);
+        assertThrows(IllegalArgumentException.class, () -> decode(bad));
+        bad.addProperty("Version", 1);
+        bad.addProperty("Type", "nonexistent");
+        assertThrows(IllegalArgumentException.class, () -> decode(bad));
+        bad.addProperty("Type", "drone");
+        bad.addProperty("Inventory", "not-a-list");
+        assertThrows(RuntimeException.class, () -> decode(bad));
+        List<JsonElement> tooMany = new ArrayList<>();
+        for (int i = 0; i < 55; i++) tooMany.add(new JsonObject());
+        JsonObject oversized = encode(new VehicleStateCodec.State<>(VehicleType.DRONE, 0, 0, 0, true, 0, tooMany));
+        assertThrows(IllegalArgumentException.class, () -> decode(oversized));
     }
+
     @Test void everyFamilyHasMultipleStableIds() {
-        Set<String> ids=new HashSet<>();
-        for(VehicleType t:VehicleType.values()) { assertTrue(ids.add(t.id)); assertEquals(t,VehicleType.fromId(t.id)); }
-        for(VehicleType.Family family:VehicleType.Family.values()) assertTrue(Arrays.stream(VehicleType.values()).filter(t->t.family==family).count()>=2);
-        assertEquals(2,VehicleType.MOTORCYCLE.seats);
-        assertTrue(VehicleType.MOTORCYCLE.speed>VehicleType.PICKUP.speed);
-        assertTrue(VehicleType.COMBINE.speed<VehicleType.PICKUP.speed);
+        Set<String> ids = new HashSet<>();
+        for (VehicleType type : VehicleType.values()) {
+            assertTrue(ids.add(type.id));
+            assertEquals(type, VehicleType.fromId(type.id));
+            VehicleStateCodec.State<JsonElement> original = new VehicleStateCodec.State<>(
+                    type, 17, type.durability, 15, true, 2, List.of());
+            assertEquals(original, roundtrip(original));
+        }
+        for (VehicleType.Family family : VehicleType.Family.values()) {
+            assertTrue(Arrays.stream(VehicleType.values()).filter(type -> type.family == family).count() >= 2);
+        }
+        assertEquals(2, VehicleType.MOTORCYCLE.seats);
+        assertTrue(VehicleType.MOTORCYCLE.speed > VehicleType.PICKUP.speed);
+        assertTrue(VehicleType.COMBINE.speed < VehicleType.PICKUP.speed);
     }
 }
