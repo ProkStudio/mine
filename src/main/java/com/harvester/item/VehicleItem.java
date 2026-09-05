@@ -7,7 +7,9 @@ import com.harvester.init.ModEntities;
 import com.harvester.vehicle.*;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.NbtComponent;
+import net.minecraft.component.type.TooltipDisplayComponent;
 import net.minecraft.item.*;
+import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.nbt.*;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -16,12 +18,22 @@ import net.minecraft.util.*;
 import net.minecraft.util.hit.*;
 import net.minecraft.util.math.*;
 import net.minecraft.world.*;
+import java.util.function.Consumer;
 
 public final class VehicleItem extends Item {
     public final VehicleType type;
     public VehicleItem(Settings settings,VehicleType type) { super(settings); this.type=type; }
     @Override public Text getName(ItemStack stack) { return Text.literal(type.displayName); }
     @Override public boolean canBeNested() { return false; }
+    @Override public void appendTooltip(ItemStack stack,TooltipContext context,TooltipDisplayComponent display,Consumer<Text> text,TooltipType tooltipType) {
+        super.appendTooltip(stack,context,display,text,tooltipType);
+        NbtCompound data=stack.getOrDefault(DataComponentTypes.CUSTOM_DATA,NbtComponent.DEFAULT).copyNbt();
+        int fuel=data.getCompoundOrEmpty("VehicleState").getInt("Fuel",0);
+        text.accept(Text.literal("Топливо в машине: "+fuel).formatted(fuel==0?Formatting.YELLOW:Formatting.GRAY));
+        text.accept(Text.literal("Заправка: канистра S/M/L в руке → ПКМ по машине").formatted(Formatting.GRAY));
+        text.accept(Text.literal("Без Shift. Канистры: вкладка Harvester в creative").formatted(Formatting.GRAY));
+        text.accept(Text.literal("ПКМ по блоку — поставить; Shift + ПКМ — забрать").formatted(Formatting.GRAY));
+    }
     @Override public ActionResult useOnBlock(ItemUsageContext c) {
         BlockPos p=c.getBlockPos().offset(c.getSide());
         return place(c.getWorld(),c.getPlayer(),c.getStack(),p.getX()+.5,p.getY(),p.getZ()+.5);
@@ -57,8 +69,8 @@ public final class VehicleItem extends Item {
         if(type.family==VehicleType.Family.BOAT && !world.getFluidState(pos).isIn(net.minecraft.registry.tag.FluidTags.WATER)) { player.sendMessage(Text.literal("Катер ставится на воду."),true); return ActionResult.FAIL; }
         if(!world.isSpaceEmpty(vehicle,vehicle.getBoundingBox()) || !world.getOtherEntities(vehicle,vehicle.getBoundingBox(),e->e instanceof CombineEntity).isEmpty()) { player.sendMessage(Text.literal("Недостаточно места для техники."),true); return ActionResult.FAIL; }
         if(!((ServerWorld)world).spawnEntity(vehicle)) return ActionResult.FAIL;
-        // Stateful items are consumed even in creative to prevent duplicating their cargo.
         if(saved || !player.getAbilities().creativeMode) stack.decrement(1);
+        if(vehicle.getFuel()==0) player.sendMessage(Text.literal("Бак пуст. Возьмите канистру во вкладке Harvester и нажмите ПКМ по машине БЕЗ Shift."),false);
         return ActionResult.SUCCESS;
     }
 }
