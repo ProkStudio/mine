@@ -1,0 +1,21 @@
+{
+	"schemaVersion": 1,
+	"id": "harvester",
+	"version": "${version}",
+	"name": "Harvester Mod",
+	"description": "Управляемый комбайн с топливом, инвентарём и автоматическим сбором урожая.",
+	"authors": ["Harvester Mod"],
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": ["com.harvester.HarvesterMod"],
+		"client": ["com.harvester.client.HarvesterModClient"]
+	},
+	"mixins": [],
+	"depends": {
+		"fabricloader": ">=0.19.0",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
