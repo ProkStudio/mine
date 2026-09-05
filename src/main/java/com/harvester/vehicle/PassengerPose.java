@@ -19,9 +19,9 @@ public final class PassengerPose {
         }
     }
     public static Limbs limbs(VehicleType type,int seat) {
-        if(type.family==VehicleType.Family.MOTORCYCLE && seat>0) return new Limbs(-.35f,.08f,-1.30f,.42f);
+        if(type.family==VehicleType.Family.MOTORCYCLE && seat>0) return new Limbs(-.35f,.08f,-1.30f,.40f);
         return switch(type.family) {
-            case MOTORCYCLE -> new Limbs(-1.05f,.18f,-1.25f,.42f);
+            case MOTORCYCLE -> new Limbs(-1.05f,.18f,-1.25f,.40f);
             case COMBINE,DOZER -> new Limbs(-.95f,.22f,-1.40f,.20f);
             case PICKUP,BOAT -> new Limbs(-1.10f,.24f,-1.40f,.20f);
             case PLANE -> new Limbs(-1.05f,.20f,-1.40f,.18f);

@@ -91,7 +91,7 @@ public class CombineEntity extends Entity {
         return feet.add(p.getVehicleAttachmentPos(this));
     }
     @Override public Vec3d updatePassengerForDismount(LivingEntity passenger) {
-        if(isOnGround() || isInWater()) {
+        if(isOnGround() || isTouchingWater()) {
             double clearance=variant().width*.5+.75;
             for(double side:new double[]{clearance,-clearance}) for(double front:new double[]{0,.8,-.8}) {
                 double yaw=Math.toRadians(getYaw());
@@ -120,8 +120,8 @@ public class CombineEntity extends Entity {
     @Override public ActionResult interact(PlayerEntity player,Hand hand) {
         if(getEntityWorld().isClient()) return ActionResult.SUCCESS;
         if(player.isSpectator() || isRemoved() || packed) return ActionResult.FAIL;
-        if(player.isSneaking()) return pickup(player)?ActionResult.SUCCESS:ActionResult.FAIL;
         ItemStack held=player.getStackInHand(hand);
+        if(player.isSneaking()) return pickup(player)?ActionResult.SUCCESS:ActionResult.FAIL;
         if(held.getItem() instanceof FuelCanItem can) {
             int amount=Math.min(can.remaining(held),Math.max(0,stats().tank-getFuel()));
             if(amount>0) { dataTracker.set(FUEL,getFuel()+amount); if(!player.getAbilities().creativeMode) can.consume(held,amount); }

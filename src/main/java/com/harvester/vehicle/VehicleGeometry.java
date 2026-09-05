@@ -49,12 +49,15 @@ public final class VehicleGeometry {
     private static final class Builder {
         final Map<String,List<Cuboid>> boxes=new LinkedHashMap<>();
         final Map<String,Part> parts=new LinkedHashMap<>();
+        final String staticPrefix;
+        Builder() { this(""); }
+        Builder(String staticPrefix) { this.staticPrefix=staticPrefix; }
         String group(String name,String material,double x,double y,double z,char axis) {
             parts.putIfAbsent(name,new Part(name,material,(float)x,(float)y,(float)z,axis,List.of()));
             boxes.computeIfAbsent(name,k->new ArrayList<>()); return name;
         }
         void add(String material,double x,double y,double z,double w,double h,double d) {
-            addTo(group(material,material,0,0,0,' '),x,y,z,w,h,d);
+            addTo(group(staticPrefix+material,material,0,0,0,' '),x,y,z,w,h,d);
         }
         void addTo(String group,double x,double y,double z,double w,double h,double d) {
             if(w<=0||h<=0||d<=0) throw new IllegalArgumentException("Nonpositive cuboid");
@@ -207,7 +210,8 @@ public final class VehicleGeometry {
         List<Part> hull=b.finish();
         if(type.family==VehicleType.Family.PLANE) hull=cut(hull,-4.2,11,-8,4.2,60,6);
         if(type.family==VehicleType.Family.HELICOPTER) hull=cut(hull,-8,11,-9,8,60,17);
-        Builder cabin=new Builder();
+        // Static cabin parts share materials with the hull, but must have distinct mesh names.
+        Builder cabin=new Builder("cabin_");
         for(int i=0;i<type.seats;i++) {
             Seat s=seat(type,i); String group=cabin.group("seat_"+i,"seat",s.x,s.top,s.z,' ');
             cabin.addTo(group,-3,-2,-3,6,2,6); cabin.addTo(group,-3,0,-3,6,6,1);
