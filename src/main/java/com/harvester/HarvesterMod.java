@@ -1,27 +1,24 @@
 package com.harvester;
 
-import com.harvester.entity.CombineEntity;
 import com.harvester.config.HarvesterConfig;
-import com.harvester.init.ModEntities;
-import com.harvester.init.ModItems;
+import com.harvester.entity.CombineEntity;
+import com.harvester.init.*;
+import com.harvester.network.VehicleInput;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import net.fabricmc.fabric.api.networking.v1.*;
+import org.slf4j.*;
 
 public class HarvesterMod implements ModInitializer {
-
-    public static final String MOD_ID = "harvester";
-    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    public static final String MOD_ID="harvester";
+    public static final Logger LOGGER=LoggerFactory.getLogger(MOD_ID);
     public static HarvesterConfig CONFIG;
-
-    @Override
-    public void onInitialize() {
-        LOGGER.info("[Harvester Mod] Инициализация...");
-        CONFIG = HarvesterConfig.load();
-        ModEntities.register();
-        ModItems.register();
-        FabricDefaultAttributeRegistry.register(ModEntities.COMBINE, CombineEntity.createAttributes());
-        LOGGER.info("[Harvester Mod] Готово!");
+    @Override public void onInitialize() {
+        CONFIG=HarvesterConfig.load();
+        ModEntities.register(); ModItems.register(); ModSounds.register();
+        PayloadTypeRegistry.playC2S().register(VehicleInput.ID,VehicleInput.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(VehicleInput.ID,(payload,context)->{
+            if(context.player().getVehicle() instanceof CombineEntity vehicle) vehicle.acceptInput(context.player(),payload.keys());
+        });
+        LOGGER.info("Harvester transport pack initialized");
     }
 }

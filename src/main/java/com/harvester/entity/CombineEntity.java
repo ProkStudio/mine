@@ -1,220 +1,360 @@
 package com.harvester.entity;
 
 import com.harvester.HarvesterMod;
+import com.harvester.config.HarvesterConfig;
 import com.harvester.init.ModItems;
+import com.harvester.init.ModSounds;
+import com.harvester.item.FuelCanItem;
+import com.harvester.item.VehicleItem;
+import com.harvester.vehicle.VehicleState;
+import com.harvester.vehicle.VehicleType;
 import net.minecraft.block.*;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.NbtComponent;
 import net.minecraft.entity.*;
-import net.minecraft.entity.attribute.DefaultAttributeContainer;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.data.*;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.SimpleInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.item.*;
+import net.minecraft.nbt.*;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.screen.GenericContainerScreenHandler;
-import net.minecraft.screen.NamedScreenHandlerFactory;
-import net.minecraft.screen.ScreenHandler;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.tag.FluidTags;
+import net.minecraft.screen.*;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
 import net.minecraft.storage.ReadView;
 import net.minecraft.storage.WriteView;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.text.Text;
+import net.minecraft.util.*;
+import net.minecraft.util.math.*;
 import net.minecraft.world.World;
+import java.util.*;
 
-import java.util.ArrayList;
-import java.util.List;
+/** Shared non-living vehicle. The old class and registry ID are retained for world migration. */
+public class CombineEntity extends Entity {
+    private static final TrackedData<Integer> TYPE=DataTracker.registerData(CombineEntity.class,TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Integer> FUEL=DataTracker.registerData(CombineEntity.class,TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Integer> CONDITION=DataTracker.registerData(CombineEntity.class,TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Integer> COLOR=DataTracker.registerData(CombineEntity.class,TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Boolean> HEADER=DataTracker.registerData(CombineEntity.class,TrackedDataHandlerRegistry.BOOLEAN);
+    private static final TrackedData<Boolean> RUNNING=DataTracker.registerData(CombineEntity.class,TrackedDataHandlerRegistry.BOOLEAN);
+    private final PositionInterpolator interpolator=new PositionInterpolator(this,3);
+    private final Set<ServerPlayerEntity> viewers=new HashSet<>();
+    private SimpleInventory inventory;
+    private int input, inputAge=100, workCooldown, damageCooldown;
+    private float impact;
+    private boolean packed, cargoBlocked;
+    private UUID inputDriver;
+    private double wheelAngle;
+    private double rotorAngle;
 
-/** Rideable harvester with a persistent vanilla 9x3 cargo inventory. */
-public class CombineEntity extends MobEntity {
-    private static final TrackedData<Boolean> HARVESTING = DataTracker.registerData(CombineEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
-    private static final TrackedData<Integer> FUEL = DataTracker.registerData(CombineEntity.class, TrackedDataHandlerRegistry.INTEGER);
-
-    private final SimpleInventory inventory = new SimpleInventory(27);
-    private int harvestCooldown;
-    private int soundTick;
-    private boolean engineRunning;
-
-    public CombineEntity(EntityType<? extends CombineEntity> type, World world) { super(type, world); }
-
-    public static DefaultAttributeContainer.Builder createAttributes() {
-        return MobEntity.createMobAttributes().add(EntityAttributes.MAX_HEALTH, 100.0)
-                .add(EntityAttributes.MOVEMENT_SPEED, 0.15).add(EntityAttributes.KNOCKBACK_RESISTANCE, 0.8);
+    public CombineEntity(EntityType<? extends CombineEntity> type, World world) {
+        super(type,world);
+        inventory=createInventory(27);
+        intersectionChecked=true;
     }
-
-    @Override protected void initDataTracker(DataTracker.Builder builder) {
-        super.initDataTracker(builder);
-        builder.add(HARVESTING, false);
-        builder.add(FUEL, HarvesterMod.CONFIG.maxFuel);
+    @Override protected void initDataTracker(DataTracker.Builder b) {
+        b.add(TYPE,0); b.add(FUEL,0); b.add(CONDITION,100); b.add(COLOR,0); b.add(HEADER,true); b.add(RUNNING,false);
     }
+    public VehicleType variant() {
+        if(dataTracker==null) return VehicleType.COMBINE;
+        return VehicleType.values()[Math.clamp(dataTracker.get(TYPE),0,VehicleType.values().length-1)];
+    }
+    public HarvesterConfig.Stats stats() { return HarvesterMod.CONFIG.stats(variant()); }
+    public void initializeVariant(VehicleType type) {
+        dataTracker.set(TYPE,type.ordinal());
+        dataTracker.set(CONDITION,HarvesterMod.CONFIG.stats(type).durability);
+        inventory=createInventory(HarvesterMod.CONFIG.stats(type).slots);
+        calculateDimensions();
+    }
+    private SimpleInventory createInventory(int size) {
+        return new SimpleInventory(size) {
+            @Override public boolean canPlayerUse(PlayerEntity p) { return !packed && !isRemoved() && p.squaredDistanceTo(CombineEntity.this)<=64; }
+            @Override public boolean isValid(int slot, ItemStack stack) { return !(stack.getItem() instanceof VehicleItem); }
+            @Override public void onOpen(PlayerEntity p) { if(p instanceof ServerPlayerEntity s) viewers.add(s); }
+            @Override public void onClose(PlayerEntity p) { if(p instanceof ServerPlayerEntity s) viewers.remove(s); }
+        };
+    }
+    @Override public EntityDimensions getDimensions(EntityPose pose) { VehicleType t=variant(); return EntityDimensions.fixed(t.width,t.height); }
+    @Override public void onTrackedDataSet(TrackedData<?> data) { super.onTrackedDataSet(data); if(TYPE.equals(data)) calculateDimensions(); }
+    @Override public PositionInterpolator getInterpolator() { return interpolator; }
+    // All movement is server-authoritative. The local rider only sends keyboard bits.
+    @Override public boolean isLogicalSideForUpdatingMovement() { return !getEntityWorld().isClient(); }
+    @Override public LivingEntity getControllingPassenger() { return getFirstPassenger() instanceof PlayerEntity p ? p : null; }
+    @Override protected boolean canAddPassenger(Entity p) { return p instanceof PlayerEntity && getPassengerList().size()<variant().seats; }
+    @Override protected Vec3d getPassengerAttachmentPos(Entity p, EntityDimensions dimensions, float scale) {
+        int seat=Math.max(0,getPassengerList().indexOf(p));
+        double y=variant().family==VehicleType.Family.COMBINE?2.15:variant().height*.70;
+        return new Vec3d(0,y,seat==0?-.15:-.85).rotateY(-getYaw()*(float)Math.PI/180);
+    }
+    @Override public boolean isPushable() { return false; }
+    @Override public boolean canHit() { return !isRemoved(); }
+    @Override public boolean isAttackable() { return !isRemoved(); }
+    @Override public float getStepHeight() { return variant().aircraft() || variant().family==VehicleType.Family.BOAT ? 0 : .6f; }
+    @Override public boolean canTeleportBetween(World from, World to) { return to.getRegistryKey().equals(World.OVERWORLD); }
+    @Override public boolean handleFallDamage(double distance, float multiplier, DamageSource source) { return false; }
+    @Override public void handleFallDamageForPassengers(double distance, float multiplier, DamageSource source) { /* Vehicle landing does not damage riders. */ }
 
-    @Override public ActionResult interactMob(PlayerEntity player, Hand hand) {
-        if (getEntityWorld().isClient()) return ActionResult.SUCCESS;
-        ItemStack held = player.getStackInHand(hand);
-        if (player.isSneaking()) {
-            player.openHandledScreen(new CombineScreenFactory());
-        } else if (held.isOf(Items.IRON_INGOT) && getHealth() < getMaxHealth()) {
-            heal(10.0f);
-            if (!player.getAbilities().creativeMode) held.decrement(1);
-            player.sendMessage(Text.literal("🔧 Комбайн отремонтирован: " + (int) getHealth() + "/" + (int) getMaxHealth()), true);
-        } else if (isFuel(held) && getFuel() < HarvesterMod.CONFIG.maxFuel) {
-            int added = held.isOf(Items.COAL_BLOCK) ? 800 : 80;
-            setFuel(Math.min(HarvesterMod.CONFIG.maxFuel, getFuel() + added));
-            if (!player.getAbilities().creativeMode) held.decrement(1);
-            player.sendMessage(Text.literal("⛽ Топливо: " + getFuel() + "/" + HarvesterMod.CONFIG.maxFuel), true);
-        } else if (getFirstPassenger() == null) {
-            player.startRiding(this);
-            player.sendMessage(Text.literal("🚜 WASD — движение | Shift+ПКМ — инвентарь | Уголь — заправка"), true);
-        } else if (getFirstPassenger() == player) {
-            player.stopRiding();
+    public void acceptInput(ServerPlayerEntity player, byte keys) {
+        if(getFirstPassenger()!=player || player.isSpectator() || isRemoved()) return;
+        input=keys & 63; inputAge=0; inputDriver=player.getUuid();
+    }
+    @Override public ActionResult interact(PlayerEntity player, Hand hand) {
+        if(getEntityWorld().isClient()) return ActionResult.SUCCESS;
+        if(player.isSpectator() || isRemoved() || packed) return ActionResult.FAIL;
+        if(player.isSneaking()) return pickup(player)?ActionResult.SUCCESS:ActionResult.FAIL;
+        ItemStack held=player.getStackInHand(hand);
+        if(held.getItem() instanceof FuelCanItem can) {
+            int amount=Math.min(can.remaining(held),Math.max(0,stats().tank-getFuel()));
+            if(amount>0) { dataTracker.set(FUEL,getFuel()+amount); if(!player.getAbilities().creativeMode) can.consume(held,amount); }
+            dashboard(player); return ActionResult.SUCCESS;
         }
+        if(held.isOf(ModItems.REPAIR_KIT)) {
+            if(getCondition()<stats().durability) { dataTracker.set(CONDITION,Math.min(stats().durability,getCondition()+40)); impact=0; consume(player,held); }
+            dashboard(player); return ActionResult.SUCCESS;
+        }
+        if(held.isOf(ModItems.PAINT)) { dataTracker.set(COLOR,(getColor()+1)%16); consume(player,held); return ActionResult.SUCCESS; }
+        if(held.isOf(Items.CHEST)) { openCargo(player); return ActionResult.SUCCESS; }
+        if(held.isOf(Items.SHEARS) && variant().family==VehicleType.Family.COMBINE) {
+            dataTracker.set(HEADER,!isHeaderEnabled());
+            player.sendMessage(Text.literal(isHeaderEnabled()?"Жатка опущена":"Жатка поднята (уборка остаётся автоматической)"),true);
+            return ActionResult.SUCCESS;
+        }
+        if(getEntityWorld().getRegistryKey()!=World.OVERWORLD) { player.sendMessage(Text.literal("Техника работает только в Overworld. Shift + ПКМ — забрать."),true); return ActionResult.FAIL; }
+        if(player.startRiding(this)) player.sendMessage(Text.literal("W/S — тяга • A/D — поворот • сундук + ПКМ — багажник • Shift + ПКМ — забрать"),true);
         return ActionResult.SUCCESS;
     }
-
-    private boolean isFuel(ItemStack stack) { return stack.isOf(Items.COAL) || stack.isOf(Items.COAL_BLOCK); }
-
-    /** Marks the rider as the controller so vanilla sends their WASD input to this vehicle. */
-    @Override public LivingEntity getControllingPassenger() {
-        Entity passenger = getFirstPassenger();
-        return passenger instanceof PlayerEntity player ? player : super.getControllingPassenger();
-    }
-
-    @Override protected Vec3d getPassengerAttachmentPos(Entity passenger, EntityDimensions dimensions, float scaleFactor) {
-        // A high, forward cockpit seat keeps the dashboard below the camera in first person.
-        return new Vec3d(0, 2.15 * scaleFactor, -0.55 * scaleFactor);
-    }
-
-    @Override public void tick() {
-        super.tick();
-        if (getEntityWorld().isClient()) { tickClientEffects(); return; }
-        Entity passenger = getFirstPassenger();
-        if (passenger instanceof PlayerEntity driver) tickDriving(driver); else stopEngine();
-        if (!engineRunning || getFuel() <= 0) return;
-        if (--harvestCooldown <= 0) {
-            harvestCooldown = HarvesterMod.CONFIG.harvestIntervalTicks;
-            harvestCrops();
-        }
-        setFuel(getFuel() - HarvesterMod.CONFIG.fuelPerTick);
-        if (getFuel() <= 0) {
-            stopEngine();
-            if (passenger instanceof PlayerEntity player) player.sendMessage(Text.literal("⚠ Топливо кончилось. Заправьте комбайн углём."), true);
-        }
-    }
-
-    private void tickDriving(PlayerEntity driver) {
-        if (getFuel() <= 0) { stopEngine(); return; }
-        // The engine stays active while the driver is in the cab, allowing a parked combine to harvest a row.
-        engineRunning = true;
-        setHarvesting(Math.abs(driver.forwardSpeed) > 0.01 || Math.abs(driver.sidewaysSpeed) > 0.01);
-        setYaw(driver.getYaw());
-        setHeadYaw(driver.getYaw());
-        setMovementSpeed((float) HarvesterMod.CONFIG.drivingSpeed);
-    }
-
-    /** Lets LivingEntity perform collision, slopes and gravity using the rider's synchronized input. */
-    @Override public void travel(Vec3d movementInput) {
-        LivingEntity controller = getControllingPassenger();
-        if (controller instanceof PlayerEntity player && getFuel() > 0) {
-            setYaw(player.getYaw());
-            setPitch(0.0f);
-            setMovementSpeed((float) HarvesterMod.CONFIG.drivingSpeed);
-            super.travel(new Vec3d(player.sidewaysSpeed * 0.5f, movementInput.y, player.forwardSpeed));
-            return;
-        }
-        super.travel(movementInput);
-    }
-
-    private void stopEngine() {
-        engineRunning = false;
-        setHarvesting(false);
-        setVelocity(getVelocity().multiply(0.55, 1.0, 0.55));
-    }
-
-    private void harvestCrops() {
-        BlockPos center = getBlockPos();
-        int radius = HarvesterMod.CONFIG.harvestRadius;
-        for (int dx = -radius; dx <= radius; dx++) for (int dz = -radius; dz <= radius; dz++) {
-            harvestBlock(center.add(dx, -1, dz));
-            harvestBlock(center.add(dx, 0, dz));
-            harvestBlock(center.add(dx, 1, dz));
-        }
-    }
-
-    private void harvestBlock(BlockPos pos) {
-        ServerWorld world = (ServerWorld) getEntityWorld();
-        BlockState state = world.getBlockState(pos);
-        Block block = state.getBlock();
-        List<ItemStack> drops = new ArrayList<>();
-        BlockState replanted = null;
-        if (block instanceof CropBlock crop && crop.isMature(state)) {
-            drops.addAll(Block.getDroppedStacks(state, (ServerWorld) world, pos, null));
-            replanted = crop.withAge(0);
-        } else if (block == Blocks.NETHER_WART && state.get(NetherWartBlock.AGE) == NetherWartBlock.MAX_AGE) {
-            drops.addAll(Block.getDroppedStacks(state, (ServerWorld) world, pos, null));
-            replanted = state.with(NetherWartBlock.AGE, 0);
-        } else if (block == Blocks.SUGAR_CANE && world.getBlockState(pos.down()).isOf(Blocks.SUGAR_CANE)) {
-            drops.addAll(Block.getDroppedStacks(state, (ServerWorld) world, pos, null));
-            replanted = Blocks.AIR.getDefaultState();
-        } else if (block == Blocks.MELON || block == Blocks.PUMPKIN) {
-            drops.addAll(Block.getDroppedStacks(state, (ServerWorld) world, pos, null));
-            replanted = Blocks.AIR.getDefaultState();
-        }
-        if (replanted == null) return;
-        world.setBlockState(pos, replanted, Block.NOTIFY_ALL);
-        for (ItemStack drop : drops) {
-            ItemStack remainder = inventory.addStack(drop.copy());
-            if (!remainder.isEmpty()) dropStack(world, remainder);
-        }
-        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 1, 0, 0.15, 0, 0);
-    }
-
-    @Override protected void writeCustomData(WriteView view) {
-        view.putInt("Fuel", getFuel());
-        List<ItemStack> stacks = new ArrayList<>();
-        for (int slot = 0; slot < inventory.size(); slot++) stacks.add(inventory.getStack(slot));
-        view.put("Inventory", ItemStack.OPTIONAL_CODEC.listOf(), stacks);
-    }
-
-    @Override protected void readCustomData(ReadView view) {
-        setFuel(view.getInt("Fuel", HarvesterMod.CONFIG.maxFuel));
-        inventory.clear();
-        view.read("Inventory", ItemStack.OPTIONAL_CODEC.listOf()).ifPresent(stacks -> {
-            for (int slot = 0; slot < Math.min(inventory.size(), stacks.size()); slot++) inventory.setStack(slot, stacks.get(slot));
+    private static void consume(PlayerEntity player, ItemStack stack) { if(!player.getAbilities().creativeMode) stack.decrement(1); }
+    private void openCargo(PlayerEntity player) {
+        player.openHandledScreen(new NamedScreenHandlerFactory() {
+            @Override public Text getDisplayName() { return Text.literal(variant().displayName+" — груз"); }
+            @Override public ScreenHandler createMenu(int id, net.minecraft.entity.player.PlayerInventory inv, PlayerEntity p) {
+                return switch(inventory.size()/9) {
+                    case 1 -> GenericContainerScreenHandler.createGeneric9x1(id,inv,inventory);
+                    case 2 -> GenericContainerScreenHandler.createGeneric9x2(id,inv,inventory);
+                    case 3 -> GenericContainerScreenHandler.createGeneric9x3(id,inv,inventory);
+                    case 4 -> GenericContainerScreenHandler.createGeneric9x4(id,inv,inventory);
+                    case 5 -> GenericContainerScreenHandler.createGeneric9x5(id,inv,inventory);
+                    default -> GenericContainerScreenHandler.createGeneric9x6(id,inv,inventory);
+                };
+            }
         });
     }
-
-    @Override protected void dropEquipment(ServerWorld world, net.minecraft.entity.damage.DamageSource source, boolean causedByPlayer) {
-        super.dropEquipment(world, source, causedByPlayer);
-        for (int slot = 0; slot < inventory.size(); slot++) {
-            ItemStack stack = inventory.getStack(slot);
-            if (!stack.isEmpty()) dropStack(world, stack);
+    public VehicleState snapshot() {
+        List<ItemStack> cargo=new ArrayList<>();
+        for(int i=0;i<inventory.size();i++) cargo.add(inventory.getStack(i).copy());
+        return new VehicleState(variant(),getFuel(),getCondition(),getColor(),isHeaderEnabled(),workCooldown,cargo);
+    }
+    public void restore(VehicleState s) {
+        initializeVariant(s.type());
+        // Do not discard cargo/fuel when a server reduces capacity in its config.
+        int preservedSlots=Math.min(54,Math.max(stats().slots,((s.cargo().size()+8)/9)*9));
+        inventory=createInventory(preservedSlots);
+        dataTracker.set(FUEL,s.fuel()); dataTracker.set(CONDITION,s.condition()); dataTracker.set(COLOR,s.color());
+        dataTracker.set(HEADER,s.headerEnabled()); workCooldown=s.workCooldown();
+        for(int i=0;i<s.cargo().size();i++) inventory.setStack(i,s.cargo().get(i).copy());
+    }
+    public ItemStack toVehicleItem() {
+        ItemStack item=new ItemStack(ModItems.vehicle(variant()));
+        NbtCompound n=new NbtCompound();
+        n.put("VehicleState",snapshot().encode(getRegistryManager().getOps(NbtOps.INSTANCE)));
+        item.set(DataComponentTypes.CUSTOM_DATA,NbtComponent.of(n));
+        if(getCustomName()!=null) item.set(DataComponentTypes.CUSTOM_NAME,getCustomName());
+        return item;
+    }
+    private void closeCargo() { for(ServerPlayerEntity p:List.copyOf(viewers)) p.closeHandledScreen(); viewers.clear(); }
+    private boolean pickup(PlayerEntity player) {
+        if(packed || isRemoved()) return false;
+        if(player.getInventory().getEmptySlot()<0) { player.sendMessage(Text.literal("Освободите один слот для техники."),true); return false; }
+        try {
+            ItemStack item=toVehicleItem();
+            if(!player.getInventory().insertStack(item)) return false;
+            packed=true; closeCargo(); removeAllPassengers(); inventory.clear(); discard();
+            return true;
+        } catch(RuntimeException e) { HarvesterMod.LOGGER.error("Vehicle pickup aborted; original retained",e); player.sendMessage(Text.literal("Не удалось сохранить технику; она оставлена в мире."),true); return false; }
+    }
+    private boolean dropPacked(ServerWorld world) {
+        if(packed || isRemoved()) return false;
+        try {
+            ItemStack item=toVehicleItem();
+            if(dropStack(world,item)==null) return false;
+            packed=true; closeCargo(); removeAllPassengers(); inventory.clear(); discard(); return true;
+        } catch(RuntimeException e) { HarvesterMod.LOGGER.error("Vehicle drop aborted; original retained",e); return false; }
+    }
+    @Override public boolean damage(ServerWorld world, DamageSource source, float amount) {
+        if(isRemoved() || packed || isAlwaysInvulnerableTo(source) || !Float.isFinite(amount) || amount<=0 || damageCooldown>0) return false;
+        damageCooldown=4;
+        dataTracker.set(CONDITION,Math.max(0,getCondition()-1));
+        impact+=Math.min(amount,10)*10;
+        if(impact>=40 || getCondition()==0 || source.getAttacker() instanceof PlayerEntity p && p.getAbilities().creativeMode) dropPacked(world);
+        return true;
+    }
+    @Override public void tick() {
+        super.tick();
+        if(getEntityWorld().isClient()) {
+            interpolator.tick();
+            if(isHarvesting()) { wheelAngle+=.25; rotorAngle+=.65; }
+            return;
         }
-        dropStack(world, new ItemStack(ModItems.COMBINE_SPAWN_EGG));
-        inventory.clear();
+        if(packed || isRemoved()) return;
+        if(damageCooldown>0) damageCooldown--;
+        impact=Math.max(0,impact-.5f);
+        if(workCooldown>0) workCooldown--;
+        inputAge++;
+        PlayerEntity driver=getFirstPassenger() instanceof PlayerEntity p ? p : null;
+        if(driver==null || inputAge>10 || !driver.getUuid().equals(inputDriver)) input=0;
+        if(!getEntityWorld().getRegistryKey().equals(World.OVERWORLD)) {
+            setVelocity(Vec3d.ZERO); dataTracker.set(RUNNING,false);
+            if(driver!=null && age%40==0) dashboard(driver);
+            return;
+        }
+        HarvesterConfig.Stats s=stats();
+        boolean powered=driver!=null && getFuel()>0 && getCondition()>0;
+        int forward=powered?((input&1)!=0?1:0)-((input&2)!=0?1:0):0;
+        int turn=powered?((input&8)!=0?1:0)-((input&4)!=0?1:0):0;
+        boolean ascend=powered && (input&16)!=0, descend=powered && (input&32)!=0;
+        boolean water=isTouchingWater();
+        if(variant().family==VehicleType.Family.BOAT && !water) { forward=0; turn=0; }
+        setYaw(HarvesterLogic.steer(getYaw(),turn,variant().aircraft()?1.5f:2.7f));
+        double speed=s.speed;
+        BlockState under=getEntityWorld().getBlockState(getBlockPos().down());
+        if(under.isOf(Blocks.MUD) || under.isOf(Blocks.SLIME_BLOCK) || under.isOf(Blocks.SOUL_SAND) || under.isOf(Blocks.HONEY_BLOCK)) speed*=.45;
+        double target=forward*speed*(forward<0?.45:1);
+        double yaw=Math.toRadians(getYaw());
+        Vec3d old=getVelocity();
+        double vx=old.x*.82-Math.sin(yaw)*target*.18;
+        double vz=old.z*.82+Math.cos(yaw)*target*.18;
+        double vy=old.y-.04;
+        if(variant().family==VehicleType.Family.BOAT) {
+            if(water) vy=getEntityWorld().getFluidState(getBlockPos().up()).isIn(FluidTags.WATER)?.08:Math.clamp(old.y*.5+.015,-.04,.04);
+            else { vx=0; vz=0; }
+        } else if(variant().verticalAircraft() && powered) {
+            vy=ascend?.12:descend?-.12:0;
+        } else if(variant().family==VehicleType.Family.PLANE) {
+            double horizontal=Math.sqrt(vx*vx+vz*vz);
+            if(powered && horizontal>.22) vy=ascend?.09:descend?-.10:-.012;
+            else if(!isOnGround()) vy=Math.max(vy,-.18);
+        }
+        if(variant().aircraft() && !powered) vy=Math.max(vy,-.18);
+        if(getY()>getEntityWorld().getTopYInclusive()-8) vy=Math.min(0,vy);
+        boolean didWork=false;
+        cargoBlocked=false;
+        // A drill can start against a wall. Bound work by input, server cooldown, and block budget.
+        if(powered && forward>0 && variant().family==VehicleType.Family.DOZER && workCooldown==0) {
+            didWork=digFront((ServerWorld)getEntityWorld(),driver);
+            workCooldown=HarvesterMod.CONFIG.digRules.intervalTicks;
+        }
+        double x=getX(), y=getY(), z=getZ();
+        Vec3d proposed=new Vec3d(vx,vy,vz);
+        BlockPos next=BlockPos.ofFloored(x+vx,y+vy,z+vz);
+        if(!getEntityWorld().isChunkLoaded(next) || !getEntityWorld().getWorldBorder().contains(next)) proposed=Vec3d.ZERO;
+        setVelocity(proposed); move(MovementType.SELF,proposed);
+        boolean moving=HarvesterLogic.isWorking(powered,getFuel(),MathHelper.square(getX()-x)+MathHelper.square(getY()-y)+MathHelper.square(getZ()-z));
+        if(moving && variant().family==VehicleType.Family.COMBINE && workCooldown==0) {
+            didWork=harvestFront((ServerWorld)getEntityWorld(),driver);
+            workCooldown=HarvesterMod.CONFIG.harvestIntervalTicks;
+        }
+        dataTracker.set(RUNNING,powered && (moving || variant().verticalAircraft() && !isOnGround()));
+        dataTracker.set(FUEL,HarvesterLogic.fuelAfter(getFuel(),s.movementFuel,s.workFuel,moving,didWork));
+        if(driver!=null && age%20==0) dashboard(driver);
+        if(isHarvesting()) effects((ServerWorld)getEntityWorld());
     }
-
-    @Override protected boolean canAddPassenger(Entity passenger) { return getPassengerList().isEmpty(); }
-    @Override public boolean isPushable() { return false; }
-    private void tickClientEffects() {
-        if (isHarvesting() && ++soundTick % 20 == 0) getEntityWorld().playSoundClient(getX(), getY(), getZ(), SoundEvents.BLOCK_PISTON_CONTRACT, SoundCategory.NEUTRAL, 0.35f, 0.6f, false);
+    private void effects(ServerWorld world) {
+        if(age%4==0) world.spawnParticles(variant().family==VehicleType.Family.BOAT?ParticleTypes.SPLASH:ParticleTypes.SMOKE,
+                getX(),getY()+.5,getZ(),1,.2,.1,.2,.01);
+        if(age%20==0) world.playSound(null,getX(),getY(),getZ(),ModSounds.ENGINE,SoundCategory.NEUTRAL,.35f,variant().aircraft()?1.2f:.7f);
     }
-    public boolean isHarvesting() { return dataTracker.get(HARVESTING); }
-    public void setHarvesting(boolean value) { dataTracker.set(HARVESTING, value); }
+    private void dashboard(PlayerEntity player) {
+        int occupied=0;
+        for(int i=0;i<inventory.size();i++) if(!inventory.getStack(i).isEmpty()) occupied++;
+        String state=!getEntityWorld().getRegistryKey().equals(World.OVERWORLD)?"только Overworld":getCondition()==0?"нужен ремонт":getFuel()==0?"нет топлива":cargoBlocked?"бункер заполнен":"готов";
+        player.sendMessage(Text.literal(variant().displayName+" | Топливо "+getFuel()+"/"+stats().tank+" | Груз "+occupied+"/"+inventory.size()+" | Состояние "+getCondition()+"/"+stats().durability+" | "+state),true);
+    }
+    private List<BlockPos> frontPositions(int height) {
+        Set<BlockPos> positions=new LinkedHashSet<>();
+        for(int dy=height;dy>=0;dy--) for(int row=0;row<2;row++) for(int side=-stats().workRadius;side<=stats().workRadius;side++) {
+            double[] off=HarvesterLogic.headerOffset(getYaw(),side,variant().width*.5+.5+row);
+            positions.add(BlockPos.ofFloored(getX()+off[0],getY()+dy,getZ()+off[1]));
+        }
+        return new ArrayList<>(positions);
+    }
+    private boolean harvestFront(ServerWorld world, PlayerEntity driver) {
+        boolean changed=false;
+        for(BlockPos pos:frontPositions(2)) {
+            if(!world.isChunkLoaded(pos) || !world.canPlayerModifyAt(driver,pos)) continue;
+            BlockState state=world.getBlockState(pos), replacement;
+            Block block=state.getBlock(); Item seed=null;
+            List<ItemStack> drops=new ArrayList<>();
+            if(block instanceof CropBlock crop && crop.isMature(state)) {
+                seed=block==Blocks.WHEAT?Items.WHEAT_SEEDS:block==Blocks.BEETROOTS?Items.BEETROOT_SEEDS:block==Blocks.CARROTS?Items.CARROT:block==Blocks.POTATOES?Items.POTATO:null;
+                if(seed==null) continue;
+                replacement=crop.withAge(0);
+            } else if(block==Blocks.NETHER_WART && state.get(NetherWartBlock.AGE)==3) {
+                seed=Items.NETHER_WART; replacement=state.with(NetherWartBlock.AGE,0);
+            } else if(block==Blocks.COCOA && state.get(CocoaBlock.AGE)==2) {
+                seed=Items.COCOA_BEANS; replacement=state.with(CocoaBlock.AGE,0);
+            } else if(block==Blocks.SWEET_BERRY_BUSH && state.get(SweetBerryBushBlock.AGE)==3) {
+                replacement=state.with(SweetBerryBushBlock.AGE,1); drops.add(new ItemStack(Items.SWEET_BERRIES,2+world.random.nextInt(2)));
+            } else if(block==Blocks.SUGAR_CANE && world.getBlockState(pos.down()).isOf(Blocks.SUGAR_CANE) && !world.getBlockState(pos.up()).isOf(Blocks.SUGAR_CANE)) {
+                replacement=Blocks.AIR.getDefaultState();
+            } else if(block==Blocks.MELON || block==Blocks.PUMPKIN) replacement=Blocks.AIR.getDefaultState();
+            else continue;
+            if(block!=Blocks.SWEET_BERRY_BUSH) for(ItemStack drop:Block.getDroppedStacks(state,world,pos,null)) drops.add(drop.copy());
+            if(seed!=null) {
+                boolean reserved=false;
+                for(ItemStack drop:drops) if(drop.isOf(seed) && !drop.isEmpty()) { drop.decrement(1); reserved=true; break; }
+                if(!reserved) continue;
+            }
+            SimpleInventory staged=stage(drops);
+            if(staged==null) { cargoBlocked=true; continue; }
+            if(world.setBlockState(pos,replacement,Block.NOTIFY_ALL)) { commitCargo(staged); changed=true; }
+        }
+        return changed;
+    }
+    private boolean digFront(ServerWorld world, PlayerEntity driver) {
+        int dug=0;
+        HarvesterConfig.DigRules rules=HarvesterMod.CONFIG.digRules;
+        for(BlockPos pos:frontPositions(1)) {
+            if(dug>=rules.blocksPerCycle) break;
+            if(!world.isChunkLoaded(pos) || !world.canPlayerModifyAt(driver,pos)) continue;
+            BlockState state=world.getBlockState(pos);
+            if(state.isAir()) continue;
+            boolean denied=rules.denied.contains(Registries.BLOCK.getId(state.getBlock()).toString());
+            if(!HarvesterLogic.diggable(state.getHardness(world,pos),rules.maxHardness,!state.getFluidState().isEmpty(),world.getBlockEntity(pos)!=null,denied)) continue;
+            List<ItemStack> drops=Block.getDroppedStacks(state,world,pos,null,this,new ItemStack(Items.DIAMOND_PICKAXE));
+            SimpleInventory staged=stage(drops);
+            if(staged==null) { cargoBlocked=true; continue; }
+            if(world.setBlockState(pos,Blocks.AIR.getDefaultState(),Block.NOTIFY_ALL)) { commitCargo(staged); dug++; }
+        }
+        return dug>0;
+    }
+    private SimpleInventory stage(List<ItemStack> drops) {
+        SimpleInventory staged=new SimpleInventory(inventory.size());
+        for(int i=0;i<inventory.size();i++) staged.setStack(i,inventory.getStack(i).copy());
+        for(ItemStack drop:drops) if(drop.getItem() instanceof VehicleItem || !staged.addStack(drop.copy()).isEmpty()) return null;
+        return staged;
+    }
+    private void commitCargo(SimpleInventory staged) { for(int i=0;i<inventory.size();i++) inventory.setStack(i,staged.getStack(i)); }
+    @Override protected void writeCustomData(WriteView view) { view.put("VehicleState",NbtCompound.CODEC,snapshot().encode(getRegistryManager().getOps(NbtOps.INSTANCE))); }
+    @Override protected void readCustomData(ReadView view) {
+        Optional<NbtCompound> saved=view.read("VehicleState",NbtCompound.CODEC);
+        if(saved.isPresent()) restore(VehicleState.decode(saved.get(),getRegistryManager().getOps(NbtOps.INSTANCE)));
+        else {
+            // Old main and improve saves: keep the registry ID, original cargo, fuel and health.
+            List<ItemStack> cargo=view.read("Inventory",ItemStack.OPTIONAL_CODEC.listOf()).orElse(List.of());
+            restore(new VehicleState(VehicleType.COMBINE,Math.clamp(view.getInt("Fuel",0),0,64000),
+                Math.clamp((int)view.getFloat("Health",100),0,10000),0,view.getBoolean("HeaderEnabled",true),0,cargo));
+        }
+        packed=false; input=0; inputAge=100; dataTracker.set(RUNNING,false);
+    }
+    public boolean isHarvesting() { return dataTracker.get(RUNNING); }
+    public boolean isHeaderEnabled() { return dataTracker.get(HEADER); }
     public int getFuel() { return dataTracker.get(FUEL); }
-    public void setFuel(int value) { dataTracker.set(FUEL, Math.clamp(value, 0, HarvesterMod.CONFIG.maxFuel)); }
-
-    private final class CombineScreenFactory implements NamedScreenHandlerFactory {
-        @Override public Text getDisplayName() { return Text.translatable("container.harvester.combine"); }
-        @Override public ScreenHandler createMenu(int syncId, net.minecraft.entity.player.PlayerInventory playerInventory, PlayerEntity player) {
-            return GenericContainerScreenHandler.createGeneric9x3(syncId, playerInventory, inventory);
-        }
-    }
+    public int getCondition() { return dataTracker.get(CONDITION); }
+    public int getColor() { return dataTracker.get(COLOR); }
+    public float wheelAngle() { return (float)wheelAngle; }
+    public float rotorAngle() { return (float)rotorAngle; }
 }
