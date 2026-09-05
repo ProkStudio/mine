@@ -20,12 +20,13 @@ public class CombineRenderer extends MobEntityRenderer<CombineEntity, CombineRen
     @Override public void updateRenderState(CombineEntity entity, CombineRenderState state, float tickProgress) {
         super.updateRenderState(entity, state, tickProgress);
         state.harvesting = entity.isHarvesting();
+        state.headerEnabled = entity.isHeaderEnabled();
+        state.reelRotation = entity.getReelRotation(tickProgress);
     }
 
     @Override public Identifier getTexture(CombineRenderState state) { return TEXTURE; }
 
     @Override protected void scale(CombineRenderState state, MatrixStack matrices) {
-        // Match the broad, low silhouette to the 4-block-wide physical vehicle.
         matrices.scale(2.0f, 1.35f, 2.0f);
     }
 }
