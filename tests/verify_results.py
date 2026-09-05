@@ -1,7 +1,6 @@
-"""Reject missing, skipped or failing state AND movement regression results.
+"""Require actual execution of state, physics, passenger, animation and resource tests.
 
-This checks execution evidence; it never substitutes for running Gradle/JUnit.
-Run after a clean build to avoid accepting stale XML from another revision.
+Run after a clean Gradle build; this verifier never substitutes for executing tests.
 """
 import json
 import os
@@ -28,11 +27,40 @@ EXPECTED = {
         'boatSidewaysDragTurnAndReverseAreLimited',
         'longFlightStaysFiniteAndSpeedLimited',
     },
+    'PassengerPoseTest': {
+        'cameraFullTurnDoesNotRotateBody',
+        'headAnglesAreRelativeBoundedAndFinite',
+        'everySeatHasFiniteLimbPose',
+        'motorcyclePassengerDoesNotHoldDriverHandlebars',
+        'itemUseAndAttackKeepVanillaArms',
+        'rearViewSeamIsSmoothedAndSeatChangeResetsHistory',
+        'headSmoothingIsIndependentForPlayersAndFrameSubdivision',
+    },
+    'VehicleAnimationTest': {
+        'smoothingIsFrameRateIndependentAndBounded',
+        'wheelRotationUsesSignedDistanceAndRadius',
+        'hubAndTireHaveIdenticalRollingRadius',
+        'rotorPhaseDoesNotDependOnFrameSubdivision',
+        'longerFramesUseTheSameResponseForRotorSpeedAndPhase',
+        'stoppedRotorsSettleAndHeaderDoesNotJump',
+        'historiesAreIndependentAndTeleportDoesNotSpinWheels',
+    },
+    'VehicleVisualResourcesTest': {
+        'passengerMixinsAreClientOnlyAndRequired',
+        'pistonPlaceholderIsNotRestored',
+    },
+}
+OUTPUTS = {
+    'VehicleStateTest': 'vehicle-state-tests.json',
+    'VehiclePhysicsTest': 'vehicle-physics-tests.json',
+    'PassengerPoseTest': 'passenger-pose-tests.json',
+    'VehicleAnimationTest': 'vehicle-animation-tests.json',
+    'VehicleVisualResourcesTest': 'vehicle-visual-resources-tests.json',
 }
 root = Path(__file__).resolve().parent.parent
 output_dir = root / 'build/verification'
-# Remove old evidence before checking anything: failure must not retain an old PASS summary.
-for filename in ('vehicle-state-tests.json', 'vehicle-physics-tests.json'):
+# A failed run must not leave an older PASS summary behind.
+for filename in OUTPUTS.values():
     (output_dir / filename).unlink(missing_ok=True)
 verified = {}
 for name, expected in EXPECTED.items():
@@ -60,7 +88,6 @@ for name, expected in EXPECTED.items():
         'skipped': 0,
     }
 output_dir.mkdir(parents=True, exist_ok=True)
-for name, filename in [('VehicleStateTest', 'vehicle-state-tests.json'),
-                       ('VehiclePhysicsTest', 'vehicle-physics-tests.json')]:
+for name, filename in OUTPUTS.items():
     (output_dir / filename).write_text(json.dumps(verified[name], indent=2) + '\n', encoding='utf-8')
     print(f'PASS: all expected {name} methods executed without failure or skip')

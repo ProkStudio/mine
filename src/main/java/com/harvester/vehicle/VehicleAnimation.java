@@ -10,7 +10,7 @@ public final class VehicleAnimation {
     private double direction = 1;
 
     public static double smooth(double current, double target, double response, double ticks) {
-        double dt = VehiclePhysics.clamp(ticks, 0, 3);
+        double dt = VehiclePhysics.clamp(ticks, 0, 5);
         double result = VehiclePhysics.finite(current)
                 + (VehiclePhysics.finite(target) - VehiclePhysics.finite(current))
                 * -Math.expm1(-Math.max(0, VehiclePhysics.finite(response)) * dt);

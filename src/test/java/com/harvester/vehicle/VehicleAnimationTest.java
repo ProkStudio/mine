@@ -37,6 +37,16 @@ class VehicleAnimationTest {
         var half=b.update(1,0,0,0,true,true,VehicleType.Family.HELICOPTER);
         assertEquals(full.engineRotor(),half.engineRotor(),1e-6);
     }
+    @Test void longerFramesUseTheSameResponseForRotorSpeedAndPhase() {
+        var a=new VehicleAnimation(); var b=new VehicleAnimation();
+        a.update(0,0,0,0,true,true,VehicleType.Family.HELICOPTER);
+        b.update(0,0,0,0,true,true,VehicleType.Family.HELICOPTER);
+        var full=a.update(4,0,0,0,true,false,VehicleType.Family.HELICOPTER);
+        b.update(2,0,0,0,true,false,VehicleType.Family.HELICOPTER);
+        var halves=b.update(4,0,0,0,true,false,VehicleType.Family.HELICOPTER);
+        assertEquals(full.engineRotor(),halves.engineRotor(),1e-6);
+        assertEquals(full.headerLift(),halves.headerLift(),1e-6);
+    }
     @Test void stoppedRotorsSettleAndHeaderDoesNotJump() {
         var a=new VehicleAnimation();
         a.update(0,0,0,0,true,true,VehicleType.Family.DRONE);
