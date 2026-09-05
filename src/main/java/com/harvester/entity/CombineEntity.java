@@ -33,7 +33,7 @@ import net.minecraft.util.math.*;
 import net.minecraft.world.World;
 import java.util.*;
 
-/** Shared non-living vehicle. The old class and registry ID are retained for world migration. */
+/** One non-living vehicle class; the legacy name/registry ID allow old-world migration. */
 public class CombineEntity extends Entity {
     private static final TrackedData<Integer> TYPE=DataTracker.registerData(CombineEntity.class,TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Integer> FUEL=DataTracker.registerData(CombineEntity.class,TrackedDataHandlerRegistry.INTEGER);
@@ -45,11 +45,9 @@ public class CombineEntity extends Entity {
     private final Set<ServerPlayerEntity> viewers=new HashSet<>();
     private SimpleInventory inventory;
     private int input, inputAge=100, workCooldown, damageCooldown;
-    private float impact;
+    private float impact, wheelAngle, rotorAngle;
     private boolean packed, cargoBlocked;
     private UUID inputDriver;
-    private double wheelAngle;
-    private double rotorAngle;
 
     public CombineEntity(EntityType<? extends CombineEntity> type, World world) {
         super(type,world);
@@ -81,9 +79,8 @@ public class CombineEntity extends Entity {
     @Override public EntityDimensions getDimensions(EntityPose pose) { VehicleType t=variant(); return EntityDimensions.fixed(t.width,t.height); }
     @Override public void onTrackedDataSet(TrackedData<?> data) { super.onTrackedDataSet(data); if(TYPE.equals(data)) calculateDimensions(); }
     @Override public PositionInterpolator getInterpolator() { return interpolator; }
-    // All movement is server-authoritative. The local rider only sends keyboard bits.
-    @Override public boolean isLogicalSideForUpdatingMovement() { return !getEntityWorld().isClient(); }
-    @Override public LivingEntity getControllingPassenger() { return getFirstPassenger() instanceof PlayerEntity p ? p : null; }
+    /** Not a vanilla client-position-controlled mount. Our driver is getFirstPassenger(). */
+    @Override public LivingEntity getControllingPassenger() { return null; }
     @Override protected boolean canAddPassenger(Entity p) { return p instanceof PlayerEntity && getPassengerList().size()<variant().seats; }
     @Override protected Vec3d getPassengerAttachmentPos(Entity p, EntityDimensions dimensions, float scale) {
         int seat=Math.max(0,getPassengerList().indexOf(p));
@@ -96,7 +93,7 @@ public class CombineEntity extends Entity {
     @Override public float getStepHeight() { return variant().aircraft() || variant().family==VehicleType.Family.BOAT ? 0 : .6f; }
     @Override public boolean canTeleportBetween(World from, World to) { return to.getRegistryKey().equals(World.OVERWORLD); }
     @Override public boolean handleFallDamage(double distance, float multiplier, DamageSource source) { return false; }
-    @Override public void handleFallDamageForPassengers(double distance, float multiplier, DamageSource source) { /* Vehicle landing does not damage riders. */ }
+    @Override public void handleFallDamageForPassengers(double distance, float multiplier, DamageSource source) { /* No gratuitous rider damage. */ }
 
     public void acceptInput(ServerPlayerEntity player, byte keys) {
         if(getFirstPassenger()!=player || player.isSpectator() || isRemoved()) return;
@@ -123,7 +120,7 @@ public class CombineEntity extends Entity {
             player.sendMessage(Text.literal(isHeaderEnabled()?"Жатка опущена":"Жатка поднята (уборка остаётся автоматической)"),true);
             return ActionResult.SUCCESS;
         }
-        if(getEntityWorld().getRegistryKey()!=World.OVERWORLD) { player.sendMessage(Text.literal("Техника работает только в Overworld. Shift + ПКМ — забрать."),true); return ActionResult.FAIL; }
+        if(!getEntityWorld().getRegistryKey().equals(World.OVERWORLD)) { player.sendMessage(Text.literal("Техника работает только в Overworld. Shift + ПКМ — забрать."),true); return ActionResult.FAIL; }
         if(player.startRiding(this)) player.sendMessage(Text.literal("W/S — тяга • A/D — поворот • сундук + ПКМ — багажник • Shift + ПКМ — забрать"),true);
         return ActionResult.SUCCESS;
     }
@@ -132,14 +129,15 @@ public class CombineEntity extends Entity {
         player.openHandledScreen(new NamedScreenHandlerFactory() {
             @Override public Text getDisplayName() { return Text.literal(variant().displayName+" — груз"); }
             @Override public ScreenHandler createMenu(int id, net.minecraft.entity.player.PlayerInventory inv, PlayerEntity p) {
-                return switch(inventory.size()/9) {
-                    case 1 -> GenericContainerScreenHandler.createGeneric9x1(id,inv,inventory);
-                    case 2 -> GenericContainerScreenHandler.createGeneric9x2(id,inv,inventory);
-                    case 3 -> GenericContainerScreenHandler.createGeneric9x3(id,inv,inventory);
-                    case 4 -> GenericContainerScreenHandler.createGeneric9x4(id,inv,inventory);
-                    case 5 -> GenericContainerScreenHandler.createGeneric9x5(id,inv,inventory);
-                    default -> GenericContainerScreenHandler.createGeneric9x6(id,inv,inventory);
+                ScreenHandlerType<?> type=switch(inventory.size()/9) {
+                    case 1 -> ScreenHandlerType.GENERIC_9X1;
+                    case 2 -> ScreenHandlerType.GENERIC_9X2;
+                    case 3 -> ScreenHandlerType.GENERIC_9X3;
+                    case 4 -> ScreenHandlerType.GENERIC_9X4;
+                    case 5 -> ScreenHandlerType.GENERIC_9X5;
+                    default -> ScreenHandlerType.GENERIC_9X6;
                 };
+                return new GenericContainerScreenHandler(type,id,inv,inventory,inventory.size()/9);
             }
         });
     }
@@ -149,10 +147,10 @@ public class CombineEntity extends Entity {
         return new VehicleState(variant(),getFuel(),getCondition(),getColor(),isHeaderEnabled(),workCooldown,cargo);
     }
     public void restore(VehicleState s) {
+        if(s.cargo().size()>54) throw new IllegalArgumentException("Cargo exceeds supported capacity");
         initializeVariant(s.type());
-        // Do not discard cargo/fuel when a server reduces capacity in its config.
-        int preservedSlots=Math.min(54,Math.max(stats().slots,((s.cargo().size()+8)/9)*9));
-        inventory=createInventory(preservedSlots);
+        // Preserve occupied slots and fuel even if a server later reduces its configured capacity.
+        inventory=createInventory(Math.min(54,Math.max(stats().slots,((s.cargo().size()+8)/9)*9)));
         dataTracker.set(FUEL,s.fuel()); dataTracker.set(CONDITION,s.condition()); dataTracker.set(COLOR,s.color());
         dataTracker.set(HEADER,s.headerEnabled()); workCooldown=s.workCooldown();
         for(int i=0;i<s.cargo().size();i++) inventory.setStack(i,s.cargo().get(i).copy());
@@ -168,24 +166,28 @@ public class CombineEntity extends Entity {
     private void closeCargo() { for(ServerPlayerEntity p:List.copyOf(viewers)) p.closeHandledScreen(); viewers.clear(); }
     private boolean pickup(PlayerEntity player) {
         if(packed || isRemoved()) return false;
-        if(player.getInventory().getEmptySlot()<0) { player.sendMessage(Text.literal("Освободите один слот для техники."),true); return false; }
-        try {
-            ItemStack item=toVehicleItem();
-            if(!player.getInventory().insertStack(item)) return false;
-            packed=true; closeCargo(); removeAllPassengers(); inventory.clear(); discard();
-            return true;
-        } catch(RuntimeException e) { HarvesterMod.LOGGER.error("Vehicle pickup aborted; original retained",e); player.sendMessage(Text.literal("Не удалось сохранить технику; она оставлена в мире."),true); return false; }
+        final ItemStack item;
+        try { item=toVehicleItem(); }
+        catch(RuntimeException e) {
+            HarvesterMod.LOGGER.error("Vehicle pickup aborted; original retained",e);
+            player.sendMessage(Text.literal("Не удалось сохранить технику; она оставлена в мире."),true); return false;
+        }
+        closeCargo();
+        if(player.getInventory().getEmptySlot()<0 || !player.getInventory().insertStack(item)) {
+            player.sendMessage(Text.literal("Освободите один слот для техники."),true); return false;
+        }
+        packed=true; removeAllPassengers(); inventory.clear(); discard(); return true;
     }
     private boolean dropPacked(ServerWorld world) {
         if(packed || isRemoved()) return false;
-        try {
-            ItemStack item=toVehicleItem();
-            if(dropStack(world,item)==null) return false;
-            packed=true; closeCargo(); removeAllPassengers(); inventory.clear(); discard(); return true;
-        } catch(RuntimeException e) { HarvesterMod.LOGGER.error("Vehicle drop aborted; original retained",e); return false; }
+        final ItemStack item;
+        try { item=toVehicleItem(); }
+        catch(RuntimeException e) { HarvesterMod.LOGGER.error("Vehicle drop aborted; original retained",e); return false; }
+        if(dropStack(world,item)==null) return false;
+        packed=true; closeCargo(); removeAllPassengers(); inventory.clear(); discard(); return true;
     }
     @Override public boolean damage(ServerWorld world, DamageSource source, float amount) {
-        if(isRemoved() || packed || isAlwaysInvulnerableTo(source) || !Float.isFinite(amount) || amount<=0 || damageCooldown>0) return false;
+        if(isRemoved() || packed || isInvulnerable() || isAlwaysInvulnerableTo(source) || !Float.isFinite(amount) || amount<=0 || damageCooldown>0) return false;
         damageCooldown=4;
         dataTracker.set(CONDITION,Math.max(0,getCondition()-1));
         impact+=Math.min(amount,10)*10;
@@ -195,15 +197,17 @@ public class CombineEntity extends Entity {
     @Override public void tick() {
         super.tick();
         if(getEntityWorld().isClient()) {
+            double x=getX(),z=getZ();
             interpolator.tick();
-            if(isHarvesting()) { wheelAngle+=.25; rotorAngle+=.65; }
+            wheelAngle=(wheelAngle+(float)Math.hypot(getX()-x,getZ()-z)/.35f)%(float)(Math.PI*2);
+            if(isHarvesting()) rotorAngle=(rotorAngle+.65f)%(float)(Math.PI*2);
             return;
         }
         if(packed || isRemoved()) return;
         if(damageCooldown>0) damageCooldown--;
         impact=Math.max(0,impact-.5f);
         if(workCooldown>0) workCooldown--;
-        inputAge++;
+        inputAge=Math.min(100,inputAge+1);
         PlayerEntity driver=getFirstPassenger() instanceof PlayerEntity p ? p : null;
         if(driver==null || inputAge>10 || !driver.getUuid().equals(inputDriver)) input=0;
         if(!getEntityWorld().getRegistryKey().equals(World.OVERWORLD)) {
@@ -241,8 +245,8 @@ public class CombineEntity extends Entity {
         if(variant().aircraft() && !powered) vy=Math.max(vy,-.18);
         if(getY()>getEntityWorld().getTopYInclusive()-8) vy=Math.min(0,vy);
         boolean didWork=false;
-        cargoBlocked=false;
-        // A drill can start against a wall. Bound work by input, server cooldown, and block budget.
+        if(workCooldown==0) cargoBlocked=false;
+        // Starting the drill against a wall is bounded by input, cooldown and block budget.
         if(powered && forward>0 && variant().family==VehicleType.Family.DOZER && workCooldown==0) {
             didWork=digFront((ServerWorld)getEntityWorld(),driver);
             workCooldown=HarvesterMod.CONFIG.digRules.intervalTicks;
@@ -343,7 +347,6 @@ public class CombineEntity extends Entity {
         Optional<NbtCompound> saved=view.read("VehicleState",NbtCompound.CODEC);
         if(saved.isPresent()) restore(VehicleState.decode(saved.get(),getRegistryManager().getOps(NbtOps.INSTANCE)));
         else {
-            // Old main and improve saves: keep the registry ID, original cargo, fuel and health.
             List<ItemStack> cargo=view.read("Inventory",ItemStack.OPTIONAL_CODEC.listOf()).orElse(List.of());
             restore(new VehicleState(VehicleType.COMBINE,Math.clamp(view.getInt("Fuel",0),0,64000),
                 Math.clamp((int)view.getFloat("Health",100),0,10000),0,view.getBoolean("HeaderEnabled",true),0,cargo));
@@ -355,6 +358,6 @@ public class CombineEntity extends Entity {
     public int getFuel() { return dataTracker.get(FUEL); }
     public int getCondition() { return dataTracker.get(CONDITION); }
     public int getColor() { return dataTracker.get(COLOR); }
-    public float wheelAngle() { return (float)wheelAngle; }
-    public float rotorAngle() { return (float)rotorAngle; }
+    public float wheelAngle() { return wheelAngle; }
+    public float rotorAngle() { return rotorAngle; }
 }
