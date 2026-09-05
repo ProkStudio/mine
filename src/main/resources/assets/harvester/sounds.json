@@ -1,1 +1,6 @@
-{"engine":{"subtitle":"subtitles.harvester.engine","sounds":[{"name":"minecraft:block.piston.contract","type":"event"}]}}
+{
+  "engine": {
+    "subtitle": "subtitles.harvester.engine",
+    "sounds": []
+  }
+}
