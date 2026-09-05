@@ -1,9 +1,1 @@
-{
-  "item.harvester.combine_spawn_egg": "Модуль призыва комбайна",
-  "entity.harvester.combine": "Комбайн",
-  "container.harvester.combine": "Инвентарь комбайна",
-  "item.harvester.combine_spawn_egg.tooltip": "Установите на землю, чтобы призвать комбайн",
-  "item.harvester.combine_spawn_egg.tooltip.fuel": "Топливо: уголь или блок угля",
-  "item.harvester.combine_spawn_egg.tooltip.control": "ПКМ — сесть; Shift+ПКМ — открыть инвентарь",
-  "item.harvester.combine_spawn_egg.tooltip.repair": "Железный слиток ремонтирует 10 единиц здоровья"
-}
+{"entity.harvester.combine":"Техника","item.harvester.repair_kit":"Набор ремонта","item.harvester.paint":"Краска (следующий цвет)","container.harvester.combine":"Бункер","subtitles.harvester.engine":"Работает двигатель"}

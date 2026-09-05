@@ -1,0 +1,7 @@
+{"parent":"harvester:item/vehicle_hand","textures":{"body":"minecraft:block/cyan_concrete"},"elements":[
+{"from":[5,4,5],"to":[11,7,11],"faces":{"north":{"texture":"#body"},"south":{"texture":"#body"},"east":{"texture":"#body"},"west":{"texture":"#body"},"up":{"texture":"#body"},"down":{"texture":"#body"}}},
+{"from":[1,5,7],"to":[15,6,9],"faces":{"north":{"texture":"#body"},"south":{"texture":"#body"},"east":{"texture":"#body"},"west":{"texture":"#body"},"up":{"texture":"#body"},"down":{"texture":"#body"}}},
+{"from":[7,5,1],"to":[9,6,15],"faces":{"north":{"texture":"#body"},"south":{"texture":"#body"},"east":{"texture":"#body"},"west":{"texture":"#body"},"up":{"texture":"#body"},"down":{"texture":"#body"}}},
+{"from":[0,7,1],"to":[5,8,3],"faces":{"north":{"texture":"#wheel"},"south":{"texture":"#wheel"},"east":{"texture":"#wheel"},"west":{"texture":"#wheel"},"up":{"texture":"#wheel"},"down":{"texture":"#wheel"}}},
+{"from":[11,7,13],"to":[16,8,15],"faces":{"north":{"texture":"#wheel"},"south":{"texture":"#wheel"},"east":{"texture":"#wheel"},"west":{"texture":"#wheel"},"up":{"texture":"#wheel"},"down":{"texture":"#wheel"}}}
+]}

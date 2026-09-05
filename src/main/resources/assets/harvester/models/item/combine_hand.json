@@ -1,0 +1,7 @@
+{"parent":"harvester:item/vehicle_hand","textures":{"body":"minecraft:block/lime_concrete"},"elements":[
+{"from":[3,4,4],"to":[13,10,15],"faces":{"north":{"texture":"#body"},"south":{"texture":"#body"},"east":{"texture":"#body"},"west":{"texture":"#body"},"up":{"texture":"#body"},"down":{"texture":"#body"}}},
+{"from":[4,10,4],"to":[12,15,9],"faces":{"north":{"texture":"#glass"},"south":{"texture":"#body"},"east":{"texture":"#glass"},"west":{"texture":"#glass"},"up":{"texture":"#body"},"down":{"texture":"#body"}}},
+{"from":[0,3,0],"to":[16,6,4],"faces":{"north":{"texture":"#wheel"},"south":{"texture":"#body"},"east":{"texture":"#body"},"west":{"texture":"#body"},"up":{"texture":"#body"},"down":{"texture":"#body"}}},
+{"from":[1,1,5],"to":[4,7,11],"faces":{"north":{"texture":"#wheel"},"south":{"texture":"#wheel"},"east":{"texture":"#wheel"},"west":{"texture":"#wheel"},"up":{"texture":"#wheel"},"down":{"texture":"#wheel"}}},
+{"from":[12,1,5],"to":[15,7,11],"faces":{"north":{"texture":"#wheel"},"south":{"texture":"#wheel"},"east":{"texture":"#wheel"},"west":{"texture":"#wheel"},"up":{"texture":"#wheel"},"down":{"texture":"#wheel"}}}
+]}

@@ -1,5 +1,1 @@
-{
-  "item.harvester.combine_spawn_egg": "Combine Summoning Module",
-  "entity.harvester.combine": "Combine Harvester",
-  "container.harvester.combine": "Combine Inventory"
-}
+{"entity.harvester.combine":"Vehicle","item.harvester.repair_kit":"Repair kit","item.harvester.paint":"Paint (next color)","container.harvester.combine":"Cargo","subtitles.harvester.engine":"Engine running"}
