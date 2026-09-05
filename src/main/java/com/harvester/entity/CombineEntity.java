@@ -72,8 +72,8 @@ public class CombineEntity extends Entity {
         return new SimpleInventory(size) {
             @Override public boolean canPlayerUse(PlayerEntity p) { return !packed && !isRemoved() && p.squaredDistanceTo(CombineEntity.this)<=64; }
             @Override public boolean isValid(int slot, ItemStack stack) { return !(stack.getItem() instanceof VehicleItem); }
-            @Override public void onOpen(PlayerEntity p) { if(p instanceof ServerPlayerEntity s) viewers.add(s); }
-            @Override public void onClose(PlayerEntity p) { if(p instanceof ServerPlayerEntity s) viewers.remove(s); }
+            @Override public void onOpen(ContainerUser user) { if(user.asLivingEntity() instanceof ServerPlayerEntity s) viewers.add(s); }
+            @Override public void onClose(ContainerUser user) { if(user.asLivingEntity() instanceof ServerPlayerEntity s) viewers.remove(s); }
         };
     }
     @Override public EntityDimensions getDimensions(EntityPose pose) { VehicleType t=variant(); return EntityDimensions.fixed(t.width,t.height); }
@@ -288,7 +288,7 @@ public class CombineEntity extends Entity {
     private boolean harvestFront(ServerWorld world, PlayerEntity driver) {
         boolean changed=false;
         for(BlockPos pos:frontPositions(2)) {
-            if(!world.isChunkLoaded(pos) || !world.canPlayerModifyAt(driver,pos)) continue;
+            if(!world.isChunkLoaded(pos) || !world.canEntityModifyAt(driver,pos)) continue;
             BlockState state=world.getBlockState(pos), replacement;
             Block block=state.getBlock(); Item seed=null;
             List<ItemStack> drops=new ArrayList<>();
@@ -323,7 +323,7 @@ public class CombineEntity extends Entity {
         HarvesterConfig.DigRules rules=HarvesterMod.CONFIG.digRules;
         for(BlockPos pos:frontPositions(1)) {
             if(dug>=rules.blocksPerCycle) break;
-            if(!world.isChunkLoaded(pos) || !world.canPlayerModifyAt(driver,pos)) continue;
+            if(!world.isChunkLoaded(pos) || !world.canEntityModifyAt(driver,pos)) continue;
             BlockState state=world.getBlockState(pos);
             if(state.isAir()) continue;
             boolean denied=rules.denied.contains(Registries.BLOCK.getId(state.getBlock()).toString());

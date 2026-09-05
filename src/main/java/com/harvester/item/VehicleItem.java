@@ -37,7 +37,7 @@ public final class VehicleItem extends Item {
         if(!world.getRegistryKey().equals(World.OVERWORLD)) { player.sendMessage(Text.literal("Техника доступна только в Overworld."),true); return ActionResult.FAIL; }
         if(world.isClient()) return ActionResult.SUCCESS;
         BlockPos pos=BlockPos.ofFloored(x,y,z);
-        if(!world.isChunkLoaded(pos) || !world.getWorldBorder().contains(pos) || !world.canPlayerModifyAt(player,pos) || !player.getAbilities().allowModifyWorld) return ActionResult.FAIL;
+        if(!world.isChunkLoaded(pos) || !world.getWorldBorder().contains(pos) || !world.canEntityModifyAt(player,pos) || !player.getAbilities().allowModifyWorld) return ActionResult.FAIL;
         CombineEntity vehicle=new CombineEntity(ModEntities.COMBINE,world);
         vehicle.initializeVariant(type);
         NbtCompound data=stack.getOrDefault(DataComponentTypes.CUSTOM_DATA,NbtComponent.DEFAULT).copyNbt();

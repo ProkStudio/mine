@@ -71,7 +71,7 @@ public class CombineRenderer extends EntityRenderer<CombineEntity,CombineRenderS
                 box(m,q,s,body,0,.85,0,.8,.55,w); box(m,q,s,body,0,.75,0,w,.12,.65);
                 box(m,q,s,body,0,.9,-w*.4,w*.55,.1,.45);
                 m.push(); m.translate(0,.9,w*.52); m.multiply(RotationAxis.POSITIVE_Z.rotation(s.rotor));
-                box(m,q,s,Blocks.BLACK_CONCRETE,0,0,0,1.3,.08,.08); m.pop(); wheels(m,q,s,w*.6,.2);
+                box(m,q,s,Blocks.BLACK_CONCRETE,0,0,0,1.3,.08,.08); m.pop(); wheels(m,q,s,w*.6f,.2f);
             }
             case HELICOPTER -> {
                 box(m,q,s,body,0,1,0,1.2,.8,1.5); box(m,q,s,body,0,1,-1.2,.2,.2,1.5);
