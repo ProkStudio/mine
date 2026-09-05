@@ -25,16 +25,13 @@ public final class VehicleAssetGenerator {
             texture("paint_"+type.id,VehicleGeometry.paintColor(type));
             List<VehicleGeometry.Part> parts=VehicleGeometry.create(type);
             if(parts.stream().mapToInt(p->p.boxes().size()).sum()<20) throw new IllegalStateException("Undetailed model: "+type);
-            model(type,parts);
-            icon(type,parts);
-            definition(type.id,type.id);
-            if(aliases.add(type.modelId())) {
+            model(type,parts); icon(type,parts); definition(type.id,type.id);
+            if(aliases.add(type.modelId()) && !type.modelId().equals(type.id)) {
                 definition(type.modelId(),type.id);
                 json("models/item/"+type.modelId()+"_hand.json",Map.of("parent","harvester:item/"+type.id+"_hand"));
                 json("models/item/"+type.modelId()+"_icon.json",Map.of("parent","harvester:item/"+type.id+"_icon"));
             }
         }
-        // Old explicit item-model components are still safe after upgrading the jar.
         json("models/item/combine_spawn_egg.json",Map.of("parent","harvester:item/combine_spawn_egg_hand"));
         json("models/item/vehicle_hand.json",Map.of("parent","harvester:item/pickup_hand"));
         for(String id:List.of("fuel_can_small","fuel_can_medium","fuel_can_large","repair_kit","paint")) {
@@ -122,16 +119,14 @@ public final class VehicleAssetGenerator {
         for(Face f:faces) {
             Polygon polygon=new Polygon();
             for(double[] v:f.vertices) { double[] p=project(v);polygon.addPoint((int)Math.round(ox+(p[0]-minX)*scale),(int)Math.round(oy+(p[1]-minY)*scale)); }
-            g.setColor(new Color(f.color));g.fillPolygon(polygon);
-            g.setColor(new Color(adjust(f.color,-18)));g.drawPolygon(polygon);
+            g.setColor(new Color(f.color));g.fillPolygon(polygon);g.setColor(new Color(adjust(f.color,-18)));g.drawPolygon(polygon);
         }
         g.dispose(); png("textures/item/"+type.id+".png",image);
     }
     private void face(List<Face> faces,double[][] vertices,int rgb) { double depth=0; for(double[] p:vertices) depth+=p[0]+p[1]+p[2];faces.add(new Face(vertices,rgb,depth/vertices.length)); }
     private double[] project(double[] p) { return new double[]{(p[0]-p[2])*.866,(p[0]+p[2])*.5-p[1]}; }
     private void serviceIcon(String id) throws IOException {
-        BufferedImage image=new BufferedImage(64,64,BufferedImage.TYPE_INT_ARGB);Graphics2D g=image.createGraphics();
-        g.setColor(new Color(0x20272c));
+        BufferedImage image=new BufferedImage(64,64,BufferedImage.TYPE_INT_ARGB);Graphics2D g=image.createGraphics();g.setColor(new Color(0x20272c));
         if(id.startsWith("fuel_can")) {
             g.fillRoundRect(16,15,33,44,5,5);g.fillRoundRect(18,6,23,14,4,4);
             g.setComposite(AlphaComposite.Clear);g.fillRect(23,10,13,5);g.setComposite(AlphaComposite.SrcOver);
@@ -153,7 +148,10 @@ public final class VehicleAssetGenerator {
         Path target=root.resolve(path);Files.createDirectories(target.getParent());
         if(!ImageIO.write(image,"png",target.toFile())) throw new IOException("PNG writer unavailable");
     }
-    private void json(String path,Object value) { jsonFiles.put(path,value); }
+    private void json(String path,Object value) {
+        if(jsonFiles.containsKey(path)) throw new IllegalStateException("Duplicate generated JSON path: "+path);
+        jsonFiles.put(path,value);
+    }
     private void write(String path,String text) throws IOException { Path target=root.resolve(path);Files.createDirectories(target.getParent());Files.writeString(target,text,StandardCharsets.UTF_8); }
     private void require(String path) { if(!Files.isRegularFile(root.resolve(path))) throw new IllegalStateException("Missing generated asset: "+path); }
     private static String stringify(Object value) {
