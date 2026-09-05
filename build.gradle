@@ -21,10 +21,6 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
-processResources {
-    inputs.property 'version', project.version
-    filesMatching('fabric.mod.json') { expand 'version': project.version }
-}
 java {
     toolchain { languageVersion = JavaLanguageVersion.of(21) }
     withSourcesJar()
@@ -32,6 +28,40 @@ java {
     targetCompatibility = JavaVersion.VERSION_21
 }
 tasks.withType(JavaCompile).configureEach { options.release = 21 }
+// Original art is reproducible from checked-in geometry, not borrowed resource-pack files.
+def artClasses = layout.buildDirectory.dir('vehicle-art-classes')
+def artResources = layout.buildDirectory.dir('generated/vehicle-assets')
+tasks.register('compileVehicleArt', JavaCompile) {
+    source = files('tools/src/VehicleAssetGenerator.java',
+        'src/main/java/com/harvester/vehicle/VehicleGeometry.java',
+        'src/main/java/com/harvester/vehicle/VehicleType.java')
+    classpath = files()
+    destinationDirectory = artClasses
+    javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
+}
+tasks.register('generateVehicleArt', JavaExec) {
+    dependsOn compileVehicleArt
+    classpath = files(artClasses)
+    mainClass = 'VehicleAssetGenerator'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    systemProperty 'java.awt.headless', 'true'
+    args artResources.get().asFile.absolutePath
+    inputs.files(tasks.named('compileVehicleArt').map { it.source })
+    outputs.dir artResources
+    doFirst { project.delete(artResources) }
+}
+processResources {
+    dependsOn generateVehicleArt
+    inputs.property 'version', project.version
+    inputs.dir artResources
+    filesMatching('fabric.mod.json') { expand 'version': project.version }
+    doLast {
+        // Replace, rather than merge, the obsolete vanilla-sprite model trees.
+        project.delete(new File(destinationDir, 'assets/harvester/items'))
+        project.delete(new File(destinationDir, 'assets/harvester/models/item'))
+        project.copy { from artResources; into destinationDir }
+    }
+}
 test { useJUnitPlatform() }
 sourceSets.test.java.srcDir 'tests'
 tasks.register('transportRules', JavaExec) {
@@ -40,28 +70,50 @@ tasks.register('transportRules', JavaExec) {
     mainClass = 'HarvesterLogicTest'
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
 }
-// Check the resource graph without launching Minecraft. External vanilla textures are checked in-game.
 tasks.register('validateVehicleResources') {
-    inputs.dir 'src/main/resources'
+    dependsOn processResources
+    inputs.dir tasks.named('processResources').map { it.destinationDir }
     doLast {
-        def root = file('src/main/resources/assets/harvester')
+        def root = new File(tasks.named('processResources').get().destinationDir, 'assets/harvester')
         def slurper = new groovy.json.JsonSlurper()
-        fileTree(root).matching { include '**/*.json' }.files.each { slurper.parse(it) }
-        def families = ['combine','dozer','pickup','motorcycle','boat','plane','helicopter','drone']
-        families.each { family ->
-            def definition = slurper.parse(new File(root,"items/${family}.json"))
-            assert definition.model.type == 'minecraft:select'
-            assert definition.model.property == 'minecraft:display_context'
-            assert definition.model.cases.any { it.when == 'gui' }
-            assert new File(root,"models/item/${family}_hand.json").exists()
-            def icon = slurper.parse(new File(root,"models/item/${family}_icon.json"))
-            assert icon.parent == 'minecraft:item/generated'
-        }
-        fileTree(new File(root,'models')).matching { include '**/*.json' }.files.each { f ->
-            def model = slurper.parse(f)
-            if (model.parent?.startsWith('harvester:')) {
-                assert new File(root,'models/'+model.parent.substring('harvester:'.length())+'.json').exists()
+        def parsed = [:]
+        fileTree(root).matching { include '**/*.json' }.files.each { f -> parsed[root.toPath().relativize(f.toPath()).toString().replace('\\','/')] = slurper.parse(f) }
+        def checkModel
+        checkModel = { String id, Set seen ->
+            assert id.startsWith('harvester:') : "Foreign model: $id"
+            assert !seen.contains(id) : "Model parent cycle: $seen -> $id"
+            def next = new HashSet(seen); next.add(id)
+            def model = parsed['models/' + id.substring(10) + '.json']
+            assert model != null : "Missing model: $id"
+            if (model.parent && model.parent != 'minecraft:item/generated') checkModel(model.parent, next)
+            (model.textures ?: [:]).values().each { texture ->
+                if (!texture.startsWith('#')) {
+                    assert texture.startsWith('harvester:') : "Borrowed texture: $texture"
+                    def png = new File(root,'textures/'+texture.substring(10)+'.png')
+                    assert png.isFile() : "Missing PNG: $png"
+                    assert javax.imageio.ImageIO.read(png) != null : "Invalid PNG: $png"
+                }
             }
+        }
+        def checkDefinition
+        checkDefinition = { node ->
+            if (node instanceof Map) node.each { key, value ->
+                if (key == 'model' && value instanceof String) checkModel(value, new HashSet())
+                else checkDefinition(value)
+            }
+            else if (node instanceof List) node.each { checkDefinition(it) }
+        }
+        def types = (file('src/main/java/com/harvester/vehicle/VehicleType.java').text =~ /(?m)^\s*[A-Z_]+\("([^"]+)"/).collect { it[1] }
+        assert types.size() == 16
+        def required = types + ['fuel_can_small','fuel_can_medium','fuel_can_large','paint','repair_kit','fuel_can']
+        required.each { id ->
+            def definition = parsed["items/${id}.json"]
+            assert definition != null : "Missing definition for registered item: $id"
+            checkDefinition(definition)
+        }
+        parsed.findAll { path, value -> path.startsWith('models/') }.each { path, value -> checkModel('harvester:'+path.substring(7,path.length()-5),new HashSet()) }
+        ['paint','metal','rubber','glass','seat','accent','dark'].each { name ->
+            assert javax.imageio.ImageIO.read(new File(root,"textures/vehicle/${name}.png")) != null
         }
         assert !fileTree('src/main/resources/data').matching { include '**/recipe/**/*.json'; include '**/recipes/**/*.json' }.files
     }
