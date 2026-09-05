@@ -1,5 +1,17 @@
 {
-  "item.harvester.combine_spawn_egg": "Combine Summoning Module",
+  "item.harvester.combine_spawn_egg": "Combine Harvester Module",
   "entity.harvester.combine": "Combine Harvester",
-  "container.harvester.combine": "Combine Inventory"
+  "container.harvester.combine": "Combine Cargo",
+  "item.harvester.combine_spawn_egg.tooltip": "Use on the ground to spawn a combine",
+  "item.harvester.combine_spawn_egg.tooltip.fuel": "Fuel: coal, charcoal or a coal block",
+  "item.harvester.combine_spawn_egg.tooltip.control": "Right-click: ride; sneak + right-click: cargo; shears + right-click: header",
+  "item.harvester.combine_spawn_egg.tooltip.repair": "An iron ingot repairs 10 health",
+  "message.harvester.repaired": "Health: %s/%s",
+  "message.harvester.fuel": "Fuel: %s/%s",
+  "message.harvester.controls": "WASD: drive | Sneak + right-click: cargo | Shears + right-click: header",
+  "message.harvester.header_on": "Header enabled",
+  "message.harvester.header_off": "Transport mode",
+  "message.harvester.empty": "Out of fuel — refuel with coal",
+  "message.harvester.full": "Harvest will not fit — unload cargo",
+  "message.harvester.dashboard": "Fuel %s/%s | Occupied slots %s/%s | %s"
 }
