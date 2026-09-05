@@ -1,0 +1,11 @@
+Standalone generator validation only; NOT a Minecraft/JUnit result.
+Source Git blob: e9944ab47e3d77858cf33d832c90c38c7cc8620b
+Compiler: Corretto javac 25.0.4 via jdk.compiler; --release 21
+Runtime: Corretto 25.0.4
+Encoder: ffmpeg 7.0.2-static, libvorbis, quality 2
+PASS mono Vorbis decode: engine samples=32000 sha256=f613b9bdb897d98b0bb41cabfee577ad604c5289e03ae197720edf2733e9f80d
+PASS mono Vorbis decode: motorcycle samples=32000 sha256=f04be5efa26a83e5f36a41a9dcc4c8947b39eb1f49f22e15b7649731a3fcb47f
+PASS mono Vorbis decode: boat samples=32000 sha256=ca494e980a1fc9a4088d60424ffa45f76b332efce66a9195ead62dedaff4470b
+PASS mono Vorbis decode: plane samples=32000 sha256=5184cb3768c05b2c109a897a1ed7162493cc7e326aeaf8972e4ada9c8d1df1f9
+PASS mono Vorbis decode: helicopter samples=32000 sha256=6982b84f7a875319cb352ee5acc727c7f56622e1a036f302db5623e33edb755f
+PASS mono Vorbis decode: drone samples=32000 sha256=69134aed9f5b03f49b0cea39cf03b2b152a7e04775d3e1971b51f5cb7624311f

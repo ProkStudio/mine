@@ -7,10 +7,12 @@ import net.minecraft.client.world.ClientWorld;
 import java.nio.file.*;
 import java.util.*;
 
-/** One loop per nearby vehicle, capped voices and no retained entities after world exit. */
+/** At most 16 loops including fading ones; no retained entities after world exit. */
 public final class VehicleAudio {
-    private static final Map<CombineEntity,VehicleEngineSound> SOUNDS=new HashMap<>();
+    private record Loop(VehicleEngineSound sound,long started) {}
+    private static final Map<CombineEntity,Loop> SOUNDS=new HashMap<>();
     private static ClientWorld world;
+    private static long clock;
     private static float gain=.65f;
     private static boolean configured;
     private VehicleAudio() {}
@@ -31,26 +33,34 @@ public final class VehicleAudio {
     public static void tick(MinecraftClient client) {
         if(!configured) configure();
         if(world!=client.world || client.player==null) {
-            for(var sound:SOUNDS.values()) { sound.stopNow(); client.getSoundManager().stop(sound); }
-            SOUNDS.clear(); world=client.world;
+            for(var loop:SOUNDS.values()) { loop.sound().stopNow(); client.getSoundManager().stop(loop.sound()); }
+            SOUNDS.clear(); world=client.world; clock=0;
         }
         if(world==null || client.player==null || gain<=0) return;
+        clock++;
         var manager=client.getSoundManager();
         List<CombineEntity> nearby=new ArrayList<>();
         for(var entity:world.getEntities()) if(entity instanceof CombineEntity vehicle
-                && !vehicle.isRemoved() && vehicle.isHarvesting() && client.player.squaredDistanceTo(vehicle)<=32*32) nearby.add(vehicle);
+                && !vehicle.isRemoved() && vehicle.isHarvesting() && vehicle.getFuel()>0 && vehicle.getCondition()>0
+                && client.player.squaredDistanceTo(vehicle)<=32*32) nearby.add(vehicle);
         nearby.sort(Comparator.comparingDouble(v->client.player.squaredDistanceTo(v)));
-        Set<CombineEntity> selected=new HashSet<>(nearby.subList(0,Math.min(16,nearby.size())));
+        List<CombineEntity> priority=nearby.subList(0,Math.min(16,nearby.size()));
+        Set<CombineEntity> selected=new HashSet<>(priority);
         var iterator=SOUNDS.entrySet().iterator();
         while(iterator.hasNext()) {
-            var entry=iterator.next(); var vehicle=entry.getKey(); var sound=entry.getValue();
+            var entry=iterator.next(); var vehicle=entry.getKey(); var loop=entry.getValue(); var sound=loop.sound();
             sound.request(selected.contains(vehicle));
             boolean lost=vehicle.isRemoved() || !world.hasEntity(vehicle);
-            boolean reload=sound.ticks()>20 && !manager.isPlaying(sound);
-            if(lost || sound.finished() || reload) { sound.stopNow(); manager.stop(sound); iterator.remove(); }
+            // Use manager time: sounds rejected by the device may never receive tick().
+            boolean unavailable=clock-loop.started()>20 && !manager.isPlaying(sound);
+            if(lost || sound.finished() || unavailable) { sound.stopNow(); manager.stop(sound); iterator.remove(); }
         }
-        for(var vehicle:selected) if(!SOUNDS.containsKey(vehicle)) {
-            var sound=new VehicleEngineSound(vehicle,gain); SOUNDS.put(vehicle,sound); manager.play(sound);
+        for(var vehicle:priority) {
+            if(SOUNDS.size()>=16) break;
+            if(!SOUNDS.containsKey(vehicle)) {
+                var sound=new VehicleEngineSound(vehicle,gain);
+                SOUNDS.put(vehicle,new Loop(sound,clock)); manager.play(sound);
+            }
         }
     }
 }
