@@ -3,9 +3,9 @@ package com.harvester.entity;
 import com.harvester.HarvesterMod;
 import com.harvester.config.HarvesterConfig;
 import com.harvester.init.ModItems;
-import com.harvester.init.ModSounds;
 import com.harvester.item.FuelCanItem;
 import com.harvester.item.VehicleItem;
+import com.harvester.vehicle.VehiclePhysics;
 import com.harvester.vehicle.VehicleState;
 import com.harvester.vehicle.VehicleType;
 import net.minecraft.block.*;
@@ -24,7 +24,6 @@ import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.screen.*;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
 import net.minecraft.storage.ReadView;
 import net.minecraft.storage.WriteView;
 import net.minecraft.text.Text;
@@ -46,8 +45,11 @@ public class CombineEntity extends Entity {
     private SimpleInventory inventory;
     private int input, inputAge=100, workCooldown, damageCooldown;
     private float impact, wheelAngle, rotorAngle;
-    private boolean packed, cargoBlocked;
+    private boolean packed, cargoBlocked, engineFlooded;
     private UUID inputDriver;
+    // Transient physics only: do not copy input, water contact or momentum into packed items.
+    private double boatTurnRate, lastWaterSurface;
+    private int waterMemory;
 
     public CombineEntity(EntityType<? extends CombineEntity> type, World world) {
         super(type,world);
@@ -121,8 +123,17 @@ public class CombineEntity extends Entity {
             return ActionResult.SUCCESS;
         }
         if(!getEntityWorld().getRegistryKey().equals(World.OVERWORLD)) { player.sendMessage(Text.literal("Техника работает только в Overworld. Shift + ПКМ — забрать."),true); return ActionResult.FAIL; }
-        if(player.startRiding(this)) player.sendMessage(Text.literal("W/S — тяга • A/D — поворот • сундук + ПКМ — багажник • Shift + ПКМ — забрать"),true);
+        if(player.startRiding(this)) {
+            if(variant().aircraft()) player.sendMessage(flightControls(),false);
+            else player.sendMessage(Text.literal("W/S — тяга • A/D — поворот • сундук + ПКМ — багажник • Shift + ПКМ — забрать"),true);
+        }
         return ActionResult.SUCCESS;
+    }
+    private Text flightControls() {
+        return Text.literal("Курс — взгляд • ").append(Text.keybind("key.forward")).append(" — тяга • ")
+            .append(Text.keybind("key.back")).append(" — тормоз • ").append(Text.keybind("key.jump"))
+            .append(" — подъём/помощь взлёту • ").append(Text.keybind("key.sprint")).append(" — снижение • ")
+            .append(Text.keybind("key.sneak")).append(" — выход. Самолёту нужен разбег; вертолёт/дрон удерживают высоту с расходом топлива.");
     }
     private static void consume(PlayerEntity player, ItemStack stack) { if(!player.getAbilities().creativeMode) stack.decrement(1); }
     private void openCargo(PlayerEntity player) {
@@ -199,7 +210,9 @@ public class CombineEntity extends Entity {
         if(getEntityWorld().isClient()) {
             double x=getX(),z=getZ();
             interpolator.tick();
-            wheelAngle=(wheelAngle+(float)Math.hypot(getX()-x,getZ()-z)/.35f)%(float)(Math.PI*2);
+            double yaw=Math.toRadians(getYaw());
+            double signedDistance=-(getX()-x)*Math.sin(yaw)+(getZ()-z)*Math.cos(yaw);
+            wheelAngle=(wheelAngle+(float)signedDistance/.35f)%(float)(Math.PI*2);
             if(isHarvesting()) rotorAngle=(rotorAngle+.65f)%(float)(Math.PI*2);
             return;
         }
@@ -208,73 +221,159 @@ public class CombineEntity extends Entity {
         impact=Math.max(0,impact-.5f);
         if(workCooldown>0) workCooldown--;
         inputAge=Math.min(100,inputAge+1);
-        PlayerEntity driver=getFirstPassenger() instanceof PlayerEntity p ? p : null;
-        if(driver==null || inputAge>10 || !driver.getUuid().equals(inputDriver)) input=0;
+        PlayerEntity driver=getFirstPassenger() instanceof PlayerEntity p && !p.isSpectator() ? p : null;
+        boolean fresh=driver!=null && driver.getUuid().equals(inputDriver) && inputAge<=10;
+        input=VehiclePhysics.usableKeys(input,inputAge,fresh);
+        if(!fresh) { inputDriver=null; inputAge=100; }
         if(!getEntityWorld().getRegistryKey().equals(World.OVERWORLD)) {
             setVelocity(Vec3d.ZERO); dataTracker.set(RUNNING,false);
+            boatTurnRate=0; waterMemory=0; engineFlooded=false;
             if(driver!=null && age%40==0) dashboard(driver);
             return;
         }
         HarvesterConfig.Stats s=stats();
-        boolean powered=driver!=null && getFuel()>0 && getCondition()>0;
+        VehicleType type=variant();
+        boolean boat=type.family==VehicleType.Family.BOAT;
+        WaterSample water=type.aircraft() || boat ? sampleWater() : new WaterSample(getY(),0);
+        engineFlooded=type.aircraft() && VehiclePhysics.flooded(engineFlooded,water.surface()-getY(),
+            Math.min(.50,type.height*.35),water.coverage());
+        boolean powered=driver!=null && getFuel()>0 && getCondition()>0 && !engineFlooded;
         int forward=powered?((input&1)!=0?1:0)-((input&2)!=0?1:0):0;
         int turn=powered?((input&8)!=0?1:0)-((input&4)!=0?1:0):0;
-        boolean ascend=powered && (input&16)!=0, descend=powered && (input&32)!=0;
-        boolean water=isTouchingWater();
-        if(variant().family==VehicleType.Family.BOAT && !water) { forward=0; turn=0; }
-        setYaw(HarvesterLogic.steer(getYaw(),turn,variant().aircraft()?1.5f:2.7f));
-        double speed=s.speed;
-        BlockState under=getEntityWorld().getBlockState(getBlockPos().down());
-        if(under.isOf(Blocks.MUD) || under.isOf(Blocks.SLIME_BLOCK) || under.isOf(Blocks.SOUL_SAND) || under.isOf(Blocks.HONEY_BLOCK)) speed*=.45;
-        double target=forward*speed*(forward<0?.45:1);
-        double yaw=Math.toRadians(getYaw());
         Vec3d old=getVelocity();
-        double vx=old.x*.82-Math.sin(yaw)*target*.18;
-        double vz=old.z*.82+Math.cos(yaw)*target*.18;
-        double vy=old.y-.04;
-        if(variant().family==VehicleType.Family.BOAT) {
-            if(water) vy=getEntityWorld().getFluidState(getBlockPos().up()).isIn(FluidTags.WATER)?.08:Math.clamp(old.y*.5+.015,-.04,.04);
-            else { vx=0; vz=0; }
-        } else if(variant().verticalAircraft() && powered) {
-            vy=ascend?.12:descend?-.12:0;
-        } else if(variant().family==VehicleType.Family.PLANE) {
-            double horizontal=Math.sqrt(vx*vx+vz*vz);
-            if(powered && horizontal>.22) vy=ascend?.09:descend?-.10:-.012;
-            else if(!isOnGround()) vy=Math.max(vy,-.18);
+        VehiclePhysics.Motion previous=new VehiclePhysics.Motion(old.x,old.y,old.z,getYaw(),getPitch());
+        VehiclePhysics.Motion motion;
+        boolean flightEngine=false;
+        if(type.aircraft()) {
+            // Vanilla player look is already server-side; no client positions or extra look payload.
+            var flight=VehiclePhysics.flight(previous,type.verticalAircraft(),powered,isOnGround(),engineFlooded,
+                fresh,input,driver==null?getYaw():driver.getYaw(),driver==null?getPitch():driver.getPitch(),s.speed);
+            motion=flight.motion(); flightEngine=flight.engineActive();
+        } else if(boat) {
+            boolean contact=water.coverage()>=2.0/9 && water.surface()-getY()>-.06;
+            if(contact) { lastWaterSurface=water.surface(); waterMemory=3; }
+            else waterMemory=Math.max(0,waterMemory-1);
+            boolean recent=waterMemory>0 && !isOnGround()
+                && Math.abs(lastWaterSurface-getY()-VehiclePhysics.BOAT_DRAFT)<.20;
+            var result=VehiclePhysics.boat(previous,boatTurnRate,input,powered,contact,recent,isOnGround(),
+                lastWaterSurface-getY()-VehiclePhysics.BOAT_DRAFT,s.speed);
+            motion=result.motion(); boatTurnRate=result.turnRate();
+        } else {
+            // Land steering is still A/D-only; camera yaw never enters this branch.
+            float yaw=HarvesterLogic.steer(getYaw(),turn,2.7f);
+            double speed=s.speed;
+            BlockState under=getEntityWorld().getBlockState(getBlockPos().down());
+            if(under.isOf(Blocks.MUD) || under.isOf(Blocks.SLIME_BLOCK) || under.isOf(Blocks.SOUL_SAND) || under.isOf(Blocks.HONEY_BLOCK)) speed*=.45;
+            double target=forward*speed*(forward<0?.45:1);
+            double angle=Math.toRadians(yaw);
+            motion=new VehiclePhysics.Motion(old.x*.82-Math.sin(angle)*target*.18,old.y-.04,
+                old.z*.82+Math.cos(angle)*target*.18,yaw,0);
         }
-        if(variant().aircraft() && !powered) vy=Math.max(vy,-.18);
+        setYaw(motion.yaw()); setPitch(motion.pitch());
+        double vy=motion.y();
         if(getY()>getEntityWorld().getTopYInclusive()-8) vy=Math.min(0,vy);
         boolean didWork=false;
         if(workCooldown==0) cargoBlocked=false;
         // Starting the drill against a wall is bounded by input, cooldown and block budget.
-        if(powered && forward>0 && variant().family==VehicleType.Family.DOZER && workCooldown==0) {
+        if(powered && forward>0 && type.family==VehicleType.Family.DOZER && workCooldown==0) {
             didWork=digFront((ServerWorld)getEntityWorld(),driver);
             workCooldown=HarvesterMod.CONFIG.digRules.intervalTicks;
         }
         double x=getX(), y=getY(), z=getZ();
-        Vec3d proposed=new Vec3d(vx,vy,vz);
-        BlockPos next=BlockPos.ofFloored(x+vx,y+vy,z+vz);
-        if(!getEntityWorld().isChunkLoaded(next) || !getEntityWorld().getWorldBorder().contains(next)) proposed=Vec3d.ZERO;
+        Vec3d proposed=new Vec3d(motion.x(),vy,motion.z());
+        if(!loadedDestination(proposed)) proposed=Vec3d.ZERO;
         setVelocity(proposed); move(MovementType.SELF,proposed);
         boolean moving=HarvesterLogic.isWorking(powered,getFuel(),MathHelper.square(getX()-x)+MathHelper.square(getY()-y)+MathHelper.square(getZ()-z));
-        if(moving && variant().family==VehicleType.Family.COMBINE && workCooldown==0) {
+        if(moving && type.family==VehicleType.Family.COMBINE && workCooldown==0) {
             didWork=harvestFront((ServerWorld)getEntityWorld(),driver);
             workCooldown=HarvesterMod.CONFIG.harvestIntervalTicks;
         }
-        dataTracker.set(RUNNING,powered && (moving || variant().verticalAircraft() && !isOnGround()));
-        dataTracker.set(FUEL,HarvesterLogic.fuelAfter(getFuel(),s.movementFuel,s.workFuel,moving,didWork));
+        boolean airborneEngine=flightEngine && !isOnGround();
+        boolean fuelDemand=VehiclePhysics.spendsMovementFuel(powered,moving,airborneEngine);
+        // A zero movementFuel setting must not reintroduce perpetual powered hovering.
+        int movementCost=airborneEngine?Math.max(1,s.movementFuel):s.movementFuel;
+        dataTracker.set(FUEL,HarvesterLogic.fuelAfter(getFuel(),movementCost,s.workFuel,fuelDemand,didWork));
+        dataTracker.set(RUNNING,powered && getFuel()>0 && (moving || flightEngine || didWork));
         if(driver!=null && age%20==0) dashboard(driver);
-        if(isHarvesting()) effects((ServerWorld)getEntityWorld());
+        if(isHarvesting()) effects((ServerWorld)getEntityWorld(),moving);
     }
-    private void effects(ServerWorld world) {
-        if(age%4==0) world.spawnParticles(variant().family==VehicleType.Family.BOAT?ParticleTypes.SPLASH:ParticleTypes.SMOKE,
-                getX(),getY()+.5,getZ(),1,.2,.1,.2,.01);
-        if(age%20==0) world.playSound(null,getX(),getY(),getZ(),ModSounds.ENGINE,SoundCategory.NEUTRAL,.35f,variant().aircraft()?1.2f:.7f);
+    private boolean loadedDestination(Vec3d movement) {
+        if(!Double.isFinite(movement.x) || !Double.isFinite(movement.y) || !Double.isFinite(movement.z)) return false;
+        double half=variant().width*.5;
+        // Check the footprint, not only the centre, before moving into a chunk or across the border.
+        for(double dx:new double[]{-half,half}) for(double dz:new double[]{-half,half}) {
+            BlockPos next=BlockPos.ofFloored(getX()+movement.x+dx,getY()+movement.y,getZ()+movement.z+dz);
+            if(!getEntityWorld().isChunkLoaded(next) || !getEntityWorld().getWorldBorder().contains(next)) return false;
+        }
+        return true;
+    }
+    private record WaterSample(double surface,double coverage) {}
+    private WaterSample sampleWater() {
+        boolean boat=variant().family==VehicleType.Family.BOAT;
+        double side=boat?variant().width*.38:Math.min(.6,variant().width*.22);
+        double length=boat?(variant()==VehicleType.BOAT_CARGO?.88:.75):.55;
+        double angle=Math.toRadians(getYaw()), sum=0;
+        int wet=0;
+        // Nine hull probes. Aircraft wings and rotor tips are deliberately excluded.
+        for(int a=-1;a<=1;a++) for(int c=-1;c<=1;c++) {
+            double x=getX()+Math.cos(angle)*a*side-Math.sin(angle)*c*length;
+            double z=getZ()+Math.sin(angle)*a*side+Math.cos(angle)*c*length;
+            double top=Double.NEGATIVE_INFINITY;
+            for(int y=MathHelper.floor(getY()-.20);y<=MathHelper.floor(getY()+Math.max(.6,variant().height*.5));y++) {
+                BlockPos pos=BlockPos.ofFloored(x,y,z);
+                if(!getEntityWorld().isChunkLoaded(pos)) continue;
+                var fluid=getEntityWorld().getFluidState(pos);
+                if(!fluid.isIn(FluidTags.WATER)) continue;
+                double surface=y+fluid.getHeight(getEntityWorld(),pos);
+                if(surface>getY()-.20) top=Math.max(top,surface);
+            }
+            if(Double.isFinite(top)) { wet++; sum+=top; }
+        }
+        return new WaterSample(wet==0?getY():sum/wet,wet/9.0);
+    }
+    private void effects(ServerWorld world, boolean moving) {
+        if(age%4!=0) return;
+        VehicleType.Family family=variant().family;
+        if(family==VehicleType.Family.BOAT) {
+            if(!moving || waterMemory==0) return;
+            double rear=variant()==VehicleType.BOAT_CARGO?-1.48:-1.30;
+            for(double side:new double[]{-.45,.45}) {
+                Vec3d pos=localEffect(side,.32,rear);
+                if(!world.getFluidState(BlockPos.ofFloored(pos.x,lastWaterSurface-.08,pos.z)).isIn(FluidTags.WATER)) continue;
+                world.spawnParticles(ParticleTypes.SPLASH,pos.x,lastWaterSurface+.06,pos.z,3,.12,.04,.12,.03);
+            }
+            return;
+        }
+        // No diesel smoke from an electric drone or from a helicopter's rotor disk.
+        if(family==VehicleType.Family.DRONE || family==VehicleType.Family.HELICOPTER) return;
+        Vec3d pos=switch(family) {
+            case COMBINE -> localEffect(.81,2.53,-.69);
+            case DOZER -> localEffect(.61,2.13,.49);
+            case PICKUP -> localEffect(.73,.43,variant()==VehicleType.PICKUP_CARGO?-1.25:-1.10);
+            case MOTORCYCLE -> localEffect(.36,.48,-.87);
+            case PLANE -> localEffect(.39,.62,variant()==VehicleType.PLANE_CARGO?1.62:1.31);
+            default -> localEffect(0,.5,-1);
+        };
+        if(!world.getBlockState(BlockPos.ofFloored(pos.x,pos.y,pos.z)).isAir()) return;
+        world.spawnParticles(ParticleTypes.SMOKE,pos.x,pos.y,pos.z,2,.035,.045,.035,.008);
+        // Piston placeholder intentionally removed. No pretend replacement OGG or periodic one-shot engine.
+    }
+    private Vec3d localEffect(double side,double up,double forward) {
+        double yaw=Math.toRadians(getYaw());
+        return new Vec3d(getX()+Math.cos(yaw)*side-Math.sin(yaw)*forward,getY()+up,
+            getZ()+Math.sin(yaw)*side+Math.cos(yaw)*forward);
     }
     private void dashboard(PlayerEntity player) {
         int occupied=0;
         for(int i=0;i<inventory.size();i++) if(!inventory.getStack(i).isEmpty()) occupied++;
-        String state=!getEntityWorld().getRegistryKey().equals(World.OVERWORLD)?"только Overworld":getCondition()==0?"нужен ремонт":getFuel()==0?"нет топлива":cargoBlocked?"бункер заполнен":"готов";
+        String state=!getEntityWorld().getRegistryKey().equals(World.OVERWORLD)?"только Overworld":getCondition()==0?"нужен ремонт":engineFlooded?"двигатель затоплен; полёт недоступен":getFuel()==0?"нет топлива":cargoBlocked?"бункер заполнен":"готов";
+        if(variant().aircraft() && state.equals("готов")) {
+            double speed=Math.hypot(getVelocity().x,getVelocity().z);
+            if(inputAge>10) state="нет свежего ввода; проверьте управление";
+            else if(variant().family==VehicleType.Family.PLANE) state=speed<=VehiclePhysics.TAKEOFF_SPEED?"нужен разбег":"скорость взлёта достигнута";
+            else state=isOnGround()?"подъём: клавиша прыжка":"полёт / удержание высоты";
+            state+=" | "+String.format(Locale.ROOT,"%.1f",speed*20)+" блок/с";
+        }
         player.sendMessage(Text.literal(variant().displayName+" | Топливо "+getFuel()+"/"+stats().tank+" | Груз "+occupied+"/"+inventory.size()+" | Состояние "+getCondition()+"/"+stats().durability+" | "+state),true);
     }
     private List<BlockPos> frontPositions(int height) {
@@ -351,7 +450,9 @@ public class CombineEntity extends Entity {
             restore(new VehicleState(VehicleType.COMBINE,Math.clamp(view.getInt("Fuel",0),0,64000),
                 Math.clamp((int)view.getFloat("Health",100),0,10000),0,view.getBoolean("HeaderEnabled",true),0,cargo));
         }
-        packed=false; input=0; inputAge=100; dataTracker.set(RUNNING,false);
+        packed=false; input=0; inputAge=100; inputDriver=null;
+        engineFlooded=false; waterMemory=0; boatTurnRate=0; lastWaterSurface=0;
+        dataTracker.set(RUNNING,false);
     }
     public boolean isHarvesting() { return dataTracker.get(RUNNING); }
     public boolean isHeaderEnabled() { return dataTracker.get(HEADER); }
