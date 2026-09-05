@@ -7,6 +7,8 @@ public class CombineRenderState extends EntityRenderState {
     public VehicleType variant=VehicleType.COMBINE;
     public int color;
     public float yaw, wheels, rotor;
+    public double wheelTravel;
+    public float engineRotor, headerLift, steering;
     public boolean harvesting, headerEnabled=true;
     // Retained for the original model source, which is no longer registered.
     public float limbSwingAnimationProgress;
