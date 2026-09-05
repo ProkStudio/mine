@@ -4,4 +4,6 @@ import net.minecraft.client.render.entity.state.LivingEntityRenderState;
 
 public class CombineRenderState extends LivingEntityRenderState {
     public boolean harvesting;
+    public boolean headerEnabled;
+    public float reelRotation;
 }

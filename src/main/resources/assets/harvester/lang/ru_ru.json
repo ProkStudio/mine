@@ -3,7 +3,15 @@
   "entity.harvester.combine": "Комбайн",
   "container.harvester.combine": "Инвентарь комбайна",
   "item.harvester.combine_spawn_egg.tooltip": "Установите на землю, чтобы призвать комбайн",
-  "item.harvester.combine_spawn_egg.tooltip.fuel": "Топливо: уголь или блок угля",
-  "item.harvester.combine_spawn_egg.tooltip.control": "ПКМ — сесть; Shift+ПКМ — открыть инвентарь",
-  "item.harvester.combine_spawn_egg.tooltip.repair": "Железный слиток ремонтирует 10 единиц здоровья"
+  "item.harvester.combine_spawn_egg.tooltip.fuel": "Топливо: уголь, древесный уголь или блок угля",
+  "item.harvester.combine_spawn_egg.tooltip.control": "ПКМ — сесть; Shift+ПКМ — инвентарь; ножницы+ПКМ — жатка",
+  "item.harvester.combine_spawn_egg.tooltip.repair": "Железный слиток ремонтирует 10 единиц здоровья",
+  "message.harvester.repaired": "Прочность: %s/%s",
+  "message.harvester.fuel": "Топливо: %s/%s",
+  "message.harvester.controls": "WASD — движение | Shift+ПКМ — бункер | Ножницы+ПКМ — жатка",
+  "message.harvester.header_on": "Жатка включена",
+  "message.harvester.header_off": "Транспортный режим",
+  "message.harvester.empty": "Нет топлива — заправьте комбайн углём",
+  "message.harvester.full": "Урожай не помещается — разгрузите бункер",
+  "message.harvester.dashboard": "Топливо %s/%s | Занято слотов %s/%s | %s"
 }

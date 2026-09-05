@@ -3,6 +3,7 @@ package com.harvester.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.harvester.HarvesterMod;
+import com.harvester.entity.HarvesterLogic;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.IOException;
@@ -47,9 +48,9 @@ public final class HarvesterConfig {
     private void sanitize() {
         maxFuel = Math.clamp(maxFuel, 80, 64_000);
         fuelPerTick = Math.clamp(fuelPerTick, 0, 20);
-        drivingSpeed = Math.clamp(drivingSpeed, 0.05, 1.0);
+        drivingSpeed = HarvesterLogic.safeSpeed(drivingSpeed);
         harvestRadius = Math.clamp(harvestRadius, 0, 4);
         harvestIntervalTicks = Math.clamp(harvestIntervalTicks, 1, 100);
-        inventorySize = 27; // The vanilla 9x3 screen needs exactly 27 slots.
+        inventorySize = 27;
     }
 }
