@@ -11,6 +11,26 @@ public final class PassengerPose {
         float head = (float) VehiclePhysics.clamp(VehiclePhysics.wrap(viewYaw - body), -65, 65);
         return new Facing(body, head, (float) VehiclePhysics.clamp(viewPitch, -35, 45));
     }
+    /** Prevent the +/-180 rear-view seam from snapping the visible head between shoulders. */
+    public static final class HeadTracker {
+        private boolean initialized;
+        private long seatIdentity;
+        private double time, yaw, pitch;
+        public Facing update(Facing target, double now, long seat) {
+            now = VehiclePhysics.finite(now);
+            double elapsed = now - time;
+            if (!initialized || seatIdentity != seat || elapsed < 0 || elapsed > 5) {
+                initialized = true; seatIdentity = seat;
+                yaw = target.headYaw(); pitch = target.headPitch();
+            } else {
+                double blend = -Math.expm1(-.50 * Math.max(0, elapsed));
+                yaw += (target.headYaw() - yaw) * blend;
+                pitch += (target.headPitch() - pitch) * blend;
+            }
+            time = now;
+            return new Facing(target.bodyYaw(), (float) yaw, (float) pitch);
+        }
+    }
     public static Limbs limbs(VehicleType type, int seat) {
         if (type.family == VehicleType.Family.MOTORCYCLE && seat > 0)
             return new Limbs(-.35f, .08f, -1.30f, .30f);

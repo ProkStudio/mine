@@ -42,4 +42,26 @@ class PassengerPoseTest {
         assertTrue(PassengerPose.keepVanillaArms(false, .5f));
         assertFalse(PassengerPose.keepVanillaArms(false, 0));
     }
+    @Test void rearViewSeamIsSmoothedAndSeatChangeResetsHistory() {
+        var tracker = new PassengerPose.HeadTracker();
+        tracker.update(PassengerPose.facing(0, 179, 0), 0, 1);
+        var crossed = tracker.update(PassengerPose.facing(0, -179, 0), .1, 1);
+        assertTrue(crossed.headYaw() > 50);
+        var changedSeat = tracker.update(PassengerPose.facing(90, 90, 20), .2, 2);
+        assertEquals(0, changedSeat.headYaw(), 1e-5);
+        assertEquals(90, changedSeat.bodyYaw(), 1e-5);
+        assertEquals(20, changedSeat.headPitch(), 1e-5);
+    }
+    @Test void headSmoothingIsIndependentForPlayersAndFrameSubdivision() {
+        var a = new PassengerPose.HeadTracker(); var b = new PassengerPose.HeadTracker();
+        var start = PassengerPose.facing(0, 0, 0); var target = PassengerPose.facing(0, 90, 30);
+        a.update(start, 0, 1); b.update(start, 0, 1);
+        var full = a.update(target, 1, 1);
+        b.update(target, .5, 1);
+        var halves = b.update(target, 1, 1);
+        assertEquals(full.headYaw(), halves.headYaw(), 1e-5);
+        assertEquals(full.headPitch(), halves.headPitch(), 1e-5);
+        var other = new PassengerPose.HeadTracker();
+        assertEquals(0, other.update(start, 1, 1).headYaw());
+    }
 }
