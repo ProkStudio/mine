@@ -91,7 +91,7 @@ public class CombineEntity extends Entity {
         return feet.add(p.getVehicleAttachmentPos(this));
     }
     @Override public Vec3d updatePassengerForDismount(LivingEntity passenger) {
-        if(isOnGround() || isInWater()) {
+        if(isOnGround() || isTouchingWater()) {
             double clearance=variant().width*.5+.75;
             for(double side:new double[]{clearance,-clearance}) for(double front:new double[]{0,.8,-.8}) {
                 double yaw=Math.toRadians(getYaw());

@@ -32,7 +32,7 @@ public final class VehicleEffects {
             return; // No diesel smoke on an electric drone or in a rotor disk.
         }
         if(family==VehicleType.Family.BOAT) {
-            if(!moving || !vehicle.isInWater()) return;
+            if(!moving || !vehicle.isTouchingWater()) return;
             double rear=type==VehicleType.BOAT_CARGO?-1.48:-1.30;
             for(double side:new double[]{-.45,.45}) {
                 Vec3d at=vehicle.localEffect(side,.3,rear);
