@@ -11,7 +11,9 @@
 		"main": ["com.harvester.HarvesterMod"],
 		"client": ["com.harvester.client.HarvesterModClient"]
 	},
-	"mixins": [],
+	"mixins": [
+		{ "config": "harvester.client.mixins.json", "environment": "client" }
+	],
 	"depends": {
 		"fabricloader": ">=0.19.0",
 		"minecraft": "~1.21.11",

@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.harvester.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "PassengerRenderStateMixin",
+    "PassengerRendererMixin",
+    "PassengerBipedModelMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
