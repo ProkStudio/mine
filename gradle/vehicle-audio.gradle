@@ -1,0 +1,43 @@
+// Build-only encoder. Neither JAVE nor native executables are included in the mod jar.
+configurations { vehicleAudioEncoder }
+def overrideEncoder = providers.gradleProperty('vehicleFfmpeg')
+def encoderVersion = '4.2.0'
+if (!overrideEncoder.isPresent()) {
+    def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+    def arch = System.getProperty('os.arch').toLowerCase(Locale.ROOT)
+    def arm = arch in ['aarch64', 'arm64']
+    def platform = os.contains('windows') ? (arm ? 'win-arm64' : 'win64') :
+        os.contains('mac') ? (arm ? 'osxm1' : 'osx64') : (arm ? 'arm64' : 'linux64')
+    dependencies {
+        vehicleAudioEncoder "ws.schild:jave-core:${encoderVersion}"
+        vehicleAudioEncoder "ws.schild:jave-nativebin-${platform}:${encoderVersion}"
+    }
+}
+def audioClasses = layout.buildDirectory.dir('vehicle-audio-classes')
+def audioResources = layout.buildDirectory.dir('generated/vehicle-audio')
+tasks.register('compileVehicleAudio', JavaCompile) {
+    source = files('tools/src/VehicleAudioGenerator.java')
+    classpath = files()
+    destinationDirectory = audioClasses
+    javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
+    options.release = 21
+}
+tasks.register('generateVehicleAudio', JavaExec) {
+    dependsOn compileVehicleAudio
+    classpath = files(audioClasses) + configurations.vehicleAudioEncoder
+    mainClass = 'VehicleAudioGenerator'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    systemProperty 'java.awt.headless', 'true'
+    args audioResources.get().asFile.absolutePath
+    if (overrideEncoder.isPresent()) args overrideEncoder.get()
+    inputs.file 'tools/src/VehicleAudioGenerator.java'
+    inputs.property 'encoderVersion', encoderVersion
+    inputs.property 'encoderOverride', overrideEncoder.orElse('bundled').get()
+    if (overrideEncoder.isPresent()) inputs.file overrideEncoder.get()
+    outputs.dir audioResources
+    doFirst { project.delete(audioResources) }
+}
+processResources {
+    dependsOn generateVehicleAudio
+    from audioResources
+}

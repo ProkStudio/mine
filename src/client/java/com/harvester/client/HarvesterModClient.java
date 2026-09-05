@@ -1,6 +1,7 @@
 package com.harvester.client;
 
 import com.harvester.client.entity.renderer.CombineRenderer;
+import com.harvester.client.sound.VehicleAudio;
 import com.harvester.entity.CombineEntity;
 import com.harvester.init.ModEntities;
 import com.harvester.network.VehicleInput;
@@ -13,6 +14,7 @@ public class HarvesterModClient implements ClientModInitializer {
     @Override public void onInitializeClient() {
         EntityRendererRegistry.register(ModEntities.COMBINE,CombineRenderer::new);
         ClientTickEvents.END_CLIENT_TICK.register(client->{
+            VehicleAudio.tick(client);
             if(client.player==null || !(client.player.getVehicle() instanceof CombineEntity vehicle) || vehicle.getFirstPassenger()!=client.player || !ClientPlayNetworking.canSend(VehicleInput.ID)) return;
             int keys=0;
             if(client.currentScreen==null) {
