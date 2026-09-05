@@ -64,7 +64,7 @@ public class CombineModel extends EntityModel<CombineRenderState> {
                 .cuboid(-14, -1, -1, 28, 2, 2)
                 .cuboid(-14, -4, -1, 28, 1, 2).cuboid(-14, 3, -1, 28, 1, 2)
                 .cuboid(-14, -1, -4, 28, 2, 1).cuboid(-14, -1, 3, 28, 2, 1)
-                .uv(0, 94).cuboid(-14, -4, -1, 1, 8, 2).cuboid(13, -4, -1, 1, 8, 2), ModelTransform.origin(0, 0, 0));
+                .uv(0, 94).cuboid(-14, -4, -1, 1, 8, 2).cuboid(13, -4, -1, 1, 8, 2), ModelTransform.origin(0, -4, -10));
         root.addChild("wheel_fl", ModelPartBuilder.create().uv(0, 70).cuboid(-3, -5, -5, 6, 10, 10), ModelTransform.origin(-14, 19, -4));
         root.addChild("wheel_fr", ModelPartBuilder.create().uv(0, 70).cuboid(-3, -5, -5, 6, 10, 10), ModelTransform.origin(14, 19, -4));
         root.addChild("wheel_bl", ModelPartBuilder.create().uv(32, 70).cuboid(-2, -4, -4, 4, 8, 8), ModelTransform.origin(-14, 20, 6));
