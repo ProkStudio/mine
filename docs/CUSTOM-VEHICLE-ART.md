@@ -7,13 +7,13 @@
 3. Hold the can and right-click the placed vehicle **without Shift**.
 4. Watch the fuel value in the actionbar. Partial refills keep unused fuel in the can. Shift + right-click picks up the vehicle instead of refueling it.
 
-Vehicle items, can tooltips, right-clicking a can in the air and placing an empty vehicle now explain this interaction. Coal is not fuel in the transport pack.
+Vehicle items, can tooltips, right-clicking a can in the air and placing an empty vehicle explain this interaction. Coal is not fuel in the transport pack.
 
 ## Original geometry and assets
 
 `VehicleGeometry.java` defines the mod's own meshes: chassis, cabins, window frames, mirrors, seats, wheels with sliced round profiles and hubs, tracked undercarriages, cutter/reel, hulls, wings, engine housings and rotors. Each variant has a generated handheld mesh and a 2D orthographic icon from that same geometry.
 
-The entity renderer now submits custom `ModelPart` meshes with **harvester-owned texture PNGs**. It no longer submits vanilla block models. No vanilla item sprite or block texture is used by the active vehicle/service-item resource graph. Vanilla's `minecraft:item/generated` parent is only the standard 2D item rendering mechanism, not borrowed artwork.
+The entity renderer submits custom `ModelPart` meshes with **harvester-owned texture PNGs**. It no longer submits vanilla block models. No vanilla item sprite or block texture is used by the active vehicle/service-item resource graph. Vanilla's `minecraft:item/generated` parent is only the standard 2D item rendering mechanism, not borrowed artwork.
 
 PNG textures and JSON models are reproducibly generated during Gradle `processResources`, using Java 21 / Java2D without new libraries or network image downloads:
 
@@ -28,8 +28,14 @@ A build check validates registered IDs, JSON model references, parent cycles and
 
 ## Updating and diagnosis
 
-Use a **new complete jar from a successful build**, not copied source JSON files alone. Keep only one Harvester jar in the mods folder. Test first with resource packs disabled; resource packs can override any mod's assets. The new generator has not been executed in the MCP-only session, nor has the client renderer been visually inspected. Build success and absence of pink cubes are not claimed until checked in a running client.
+Use a **new complete jar from a successful build**, not copied source JSON files alone. Keep only one Harvester jar in the mods folder. Test first with resource packs disabled; resource packs can override any mod's assets. The generator has not been executed in the MCP-only session, nor has the client renderer been visually inspected. Build success and absence of pink cubes are not claimed until checked in a running client.
 
 If missing models remain after updating, record the exact item ID, whether the issue is in GUI/hand/world, and the corresponding model/texture error from `latest.log`. Do not destroy a stateful vehicle item to diagnose it; compare it with a fresh `/give` item and retain the original cargo.
 
-Existing README graphics paragraphs describing temporary vanilla icons are superseded by this document. The engine sound remains the previously documented vanilla sound-event placeholder; this change replaces graphics, not audio.
+## Flight/water follow-up, 2026-09-05
+
+See [TRANSPORT-IMPLEMENTATION-STATUS.md](TRANSPORT-IMPLEMENTATION-STATUS.md) for implemented changes and outstanding work. Flight steering now uses the driver's look; the existing aircraft model has NOT yet been rigged to visually follow the new control pitch or bank. Seat/cabin/body-pose fixes remain outstanding; do not diagnose those as already fixed by the physics commit.
+
+Wheel phase now uses signed travel. Exhaust positions have moved outside the relevant engine/body surfaces and rotate with vehicle yaw; boat splashes originate at the stern. Rotor downwash, work debris and shared geometry/emitter definitions are still pending. Visibility has not been checked in-game.
+
+The periodic piston engine sound and its resource reference were removed. The registered `harvester:engine` event has an empty sound list; the engine is intentionally silent until original/licensed mono OGG assets and a proper looping client lifecycle are implemented. No OGG files were generated or claimed as tested in this stage.
