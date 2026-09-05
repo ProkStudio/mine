@@ -4,6 +4,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.HashSet;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -41,7 +43,29 @@ class VehicleVisualResourcesTest {
     @Test void pistonPlaceholderIsNotRestored() throws Exception {
         var sounds=resource("/assets/harvester/sounds.json");
         assertFalse(sounds.toString().contains("piston"));
-        // Until real OGG audio is added, silence is intentional and explicitly documented.
-        assertTrue(sounds.getAsJsonObject("engine").getAsJsonArray("sounds").isEmpty());
+        var manifest=resource("/assets/harvester/sounds/manifest.json");
+        Set<String> expected=Set.of("engine","motorcycle","boat","plane","helicopter","drone");
+        assertEquals(expected,manifest.keySet());
+        assertEquals(6,sounds.size());
+        Set<String> referenced=new HashSet<>();
+        for(var event:sounds.entrySet()) {
+            var entries=event.getValue().getAsJsonObject().getAsJsonArray("sounds");
+            assertEquals(1,entries.size());
+            String id=entries.get(0).getAsJsonObject().get("name").getAsString();
+            assertTrue(id.startsWith("harvester:")); referenced.add(id.substring(10));
+        }
+        assertEquals(expected,referenced);
+        for(String name:expected) {
+            try(var input=getClass().getResourceAsStream("/assets/harvester/sounds/"+name+".ogg")) {
+                assertNotNull(input,"Missing OGG: "+name);
+                byte[] data=input.readAllBytes();
+                assertTrue(data.length>100);
+                assertEquals("OggS",new String(data,0,4,StandardCharsets.US_ASCII));
+                String hash=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(data));
+                assertEquals(manifest.getAsJsonObject(name).get("sha256").getAsString(),hash);
+                assertEquals(1,manifest.getAsJsonObject(name).get("channels").getAsInt());
+                assertEquals(32000,manifest.getAsJsonObject(name).get("samples").getAsInt());
+            }
+        }
     }
 }
