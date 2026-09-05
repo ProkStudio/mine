@@ -1,49 +1,70 @@
 plugins {
-	id 'fabric-loom' version "${loom_version}"
-	id 'maven-publish'
+    id 'fabric-loom' version "${loom_version}"
+    id 'maven-publish'
 }
-
-repositories {
-}
-
+repositories { mavenCentral() }
 loom {
-	splitEnvironmentSourceSets()
-
-	mods {
-		"harvester" {
-			sourceSet sourceSets.main
-			sourceSet sourceSets.client
-		}
-	}
+    splitEnvironmentSourceSets()
+    mods {
+        "harvester" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
 }
-
 dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
-
 processResources {
-	def version = project.version
-	inputs.property "version", version
-	filesMatching("fabric.mod.json") {
-		expand "version": version
-	}
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') { expand 'version': project.version }
 }
-
-tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
-}
-
 java {
-	withSourcesJar()
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
-
-jar {
-	from("LICENSE") {
-		rename { "${it}_${project.name}"}
-	}
+tasks.withType(JavaCompile).configureEach { options.release = 21 }
+test { useJUnitPlatform() }
+sourceSets.test.java.srcDir 'tests'
+tasks.register('transportRules', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'HarvesterLogicTest'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
 }
+// Check the resource graph without launching Minecraft. External vanilla textures are checked in-game.
+tasks.register('validateVehicleResources') {
+    inputs.dir 'src/main/resources'
+    doLast {
+        def root = file('src/main/resources/assets/harvester')
+        def slurper = new groovy.json.JsonSlurper()
+        fileTree(root).matching { include '**/*.json' }.files.each { slurper.parse(it) }
+        def families = ['combine','dozer','pickup','motorcycle','boat','plane','helicopter','drone']
+        families.each { family ->
+            def definition = slurper.parse(new File(root,"items/${family}.json"))
+            assert definition.model.type == 'minecraft:select'
+            assert definition.model.property == 'minecraft:display_context'
+            assert definition.model.cases.any { it.when == 'gui' }
+            assert new File(root,"models/item/${family}_hand.json").exists()
+            def icon = slurper.parse(new File(root,"models/item/${family}_icon.json"))
+            assert icon.parent == 'minecraft:item/generated'
+        }
+        fileTree(new File(root,'models')).matching { include '**/*.json' }.files.each { f ->
+            def model = slurper.parse(f)
+            if (model.parent?.startsWith('harvester:')) {
+                assert new File(root,'models/'+model.parent.substring('harvester:'.length())+'.json').exists()
+            }
+        }
+        assert !fileTree('src/main/resources/data').matching { include '**/recipe/**/*.json'; include '**/recipes/**/*.json' }.files
+    }
+}
+check.dependsOn transportRules, validateVehicleResources
+jar { from('LICENSE') { rename { "${it}_${project.name}" } } }
