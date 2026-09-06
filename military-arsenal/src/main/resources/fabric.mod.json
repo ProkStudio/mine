@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "arsenal",
+  "version": "${version}",
+  "name": "Military Arsenal",
+  "description": "Original weapons, ammunition, 3D models and server-authoritative combat for Fabric 1.21.11.",
+  "authors": ["ProkStudio"],
+  "license": "CC0-1.0",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["dev.mine.arsenal.Arsenal"],
+    "client": ["dev.mine.arsenal.client.ArsenalClient"]
+  },
+  "mixins": [{"config": "arsenal.client.mixins.json", "environment": "client"}],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "1.21.11",
+    "java": ">=21",
+    "fabric-api": ">=0.141.6+1.21.11"
+  }
+}

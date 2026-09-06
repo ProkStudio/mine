@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "dev.mine.arsenal.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["WeaponInputMixin", "HeldWeaponMixin", "WeaponFovMixin", "WeaponHudMixin", "WeaponPoseStateMixin", "WeaponPlayerRendererMixin", "WeaponArmsMixin"],
+  "injectors": {"defaultRequire": 1}
+}
