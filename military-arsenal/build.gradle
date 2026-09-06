@@ -1,0 +1,108 @@
+plugins { id 'fabric-loom' version '1.14.10' }
+repositories { mavenCentral() }
+base { archivesName = 'military-arsenal' }
+loom {
+    splitEnvironmentSourceSets()
+    mods { arsenal { sourceSet sourceSets.main; sourceSet sourceSets.client } }
+}
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+java { toolchain { languageVersion = JavaLanguageVersion.of(21) }; withSourcesJar() }
+tasks.withType(JavaCompile).configureEach { options.release=21; options.encoding='UTF-8' }
+sourceSets.test.java.srcDir 'tests'
+test { useJUnitPlatform() }
+configurations { audioEncoder }
+def encoder=providers.gradleProperty('arsenalFfmpeg')
+if(!encoder.isPresent()) {
+    def os=System.getProperty('os.name').toLowerCase(Locale.ROOT)
+    def arm=System.getProperty('os.arch').toLowerCase(Locale.ROOT) in ['arm64','aarch64']
+    def platform=os.contains('windows')?(arm?'win-arm64':'win64'):os.contains('mac')?(arm?'osxm1':'osx64'):(arm?'arm64':'linux64')
+    dependencies { audioEncoder 'ws.schild:jave-core:4.2.0'; audioEncoder "ws.schild:jave-nativebin-${platform}:4.2.0" }
+}
+def generatorClasses=layout.buildDirectory.dir('generator-classes')
+def generatedArt=layout.buildDirectory.dir('generated/arsenal-art')
+def generatedAudio=layout.buildDirectory.dir('generated/arsenal-audio')
+tasks.register('compileArsenalGenerators',JavaCompile) {
+    source=fileTree('tools') { include '*.java' }
+    source+=fileTree('src/main/java/dev/mine/arsenal/core') { include '*.java' }
+    classpath=files(); destinationDirectory=generatorClasses
+    javaCompiler=javaToolchains.compilerFor { languageVersion=JavaLanguageVersion.of(21) }
+}
+tasks.register('generateArsenalArt',JavaExec) {
+    dependsOn compileArsenalGenerators
+    classpath=files(generatorClasses); mainClass='ArsenalAssets'
+    javaLauncher=javaToolchains.launcherFor { languageVersion=JavaLanguageVersion.of(21) }
+    systemProperty 'java.awt.headless','true'
+    args generatedArt.get().asFile.absolutePath
+    inputs.files(tasks.named('compileArsenalGenerators').map { it.source }); outputs.dir generatedArt
+    doFirst { project.delete(generatedArt) }
+}
+tasks.register('generateArsenalAudio',JavaExec) {
+    dependsOn compileArsenalGenerators
+    classpath=files(generatorClasses)+configurations.audioEncoder; mainClass='ArsenalAudio'
+    javaLauncher=javaToolchains.launcherFor { languageVersion=JavaLanguageVersion.of(21) }
+    args generatedAudio.get().asFile.absolutePath
+    if(encoder.isPresent()) args encoder.get()
+    inputs.file 'tools/ArsenalAudio.java'; inputs.property 'encoder',encoder.orElse('JAVE-4.2.0').get()
+    outputs.dir generatedAudio
+    doFirst { project.delete(generatedAudio) }
+}
+processResources {
+    dependsOn generateArsenalArt,generateArsenalAudio
+    from generatedArt; from generatedAudio
+    inputs.property 'version',project.version
+    filesMatching('fabric.mod.json') { expand 'version':project.version }
+}
+tasks.register('validateArsenalResources') {
+    dependsOn processResources
+    doLast {
+        def root=tasks.named('processResources').get().destinationDir
+        def slurper=new groovy.json.JsonSlurper()
+        def manifest=slurper.parse(new File(root,'assets/arsenal/art_manifest.json'))
+        assert manifest.weapons==16 && manifest.ammunition==14 && manifest.models==350
+        def definitions=fileTree(new File(root,'assets/arsenal/items')).matching { include '*.json' }.files
+        assert definitions.size()==30
+        def validateNode
+        validateNode={ node ->
+            if(node instanceof Map) {
+                if(node.type=='minecraft:model') assert new File(root,'assets/arsenal/models/'+node.model.substring(8)+'.json').isFile():"Missing model ${node.model}"
+                node.values().each { validateNode(it) }
+            } else if(node instanceof List) node.each { validateNode(it) }
+        }
+        definitions.each { validateNode(slurper.parse(it)) }
+        def models=fileTree(new File(root,'assets/arsenal/models')).matching { include '**/*.json' }.files
+        assert models.size()==350
+        models.each { file ->
+            def m=slurper.parse(file)
+            ['gui','ground','fixed','firstperson_righthand','firstperson_lefthand','thirdperson_righthand','thirdperson_lefthand'].each { assert m.display[it]!=null }
+            m.elements.each { e ->
+                (0..2).each { axis -> assert e.from[axis]>=-16 && e.to[axis]<=32 && e.to[axis]>e.from[axis]:"Bad cuboid in ${file}: ${e}" }
+                e.faces.values().each { face -> assert m.textures[face.texture.substring(1)]!=null }
+            }
+            m.textures.values().findAll { !it.startsWith('#') }.each { t ->
+                assert t.startsWith('arsenal:')
+                assert javax.imageio.ImageIO.read(new File(root,'assets/arsenal/textures/'+t.substring(8)+'.png'))!=null
+            }
+        }
+        def sounds=slurper.parse(new File(root,'assets/arsenal/sounds.json'))
+        assert sounds.size()==12
+        sounds.values().each { sound -> sound.sounds.each { ref ->
+            byte[] bytes=new File(root,'assets/arsenal/sounds/'+ref.name.substring(8)+'.ogg').bytes
+            assert bytes.length>100 && new String(bytes,0,4,'US-ASCII')=='OggS'
+            assert new String(bytes,0,Math.min(128,bytes.length),'ISO-8859-1').contains('vorbis')
+        } }
+        assert fileTree(new File(root,'data/arsenal/recipe')).matching { include '*.json' }.files.size()==30
+        def en=slurper.parse(new File(root,'assets/arsenal/lang/en_us.json')),ru=slurper.parse(new File(root,'assets/arsenal/lang/ru_ru.json'))
+        assert en.keySet()==ru.keySet()
+    }
+}
+check.dependsOn validateArsenalResources
+jar { from('LICENSE') { rename { 'LICENSE_military-arsenal' } } }
+tasks.named('sourcesJar') { from('tools') { into 'generators' } }

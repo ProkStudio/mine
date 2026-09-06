@@ -1,0 +1,81 @@
+name: Military Arsenal
+on:
+  push:
+    paths: ['military-arsenal/**', '.github/workflows/military-arsenal.yml']
+  pull_request:
+    paths: ['military-arsenal/**', '.github/workflows/military-arsenal.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: write
+concurrency:
+  group: arsenal-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: military-arsenal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Ensure build-only audio encoder
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y ffmpeg
+          fi
+      - name: Build and verify Arsenal only
+        id: build
+        continue-on-error: true
+        run: |
+          set +e
+          set -o pipefail
+          {
+            sh tests/run.sh &&
+            bash ../gradlew -p . --no-daemon --stacktrace clean build -ParsenalFfmpeg="$(command -v ffmpeg)" &&
+            python3 tests/verify_junit.py
+          } 2>&1 | tee "$RUNNER_TEMP/arsenal-build.log"
+          exit "${PIPESTATUS[0]}"
+      - name: Publish readable diagnostics
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/github-script@v7
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+        with:
+          script: |
+            const fs = require('fs');
+            const file = `${process.env.RUNNER_TEMP}/arsenal-build.log`;
+            const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').slice(-52000) : 'Build did not start; inspect workflow setup steps.';
+            const ok = process.env.BUILD_OUTCOME === 'success';
+            await github.rest.checks.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              name: 'Military Arsenal diagnostics',
+              head_sha: context.payload.pull_request?.head.sha || context.sha,
+              status: 'completed', conclusion: ok ? 'success' : 'failure',
+              output: {
+                title: ok ? 'Arsenal build and checks passed' : 'Arsenal requires attention',
+                summary: 'Standalone rules, resource validation, Fabric compilation, JUnit execution and remapped jar. This is not an in-game QA result.',
+                text: '```text\n' + text + '\n```'
+              }
+            });
+      - name: Upload jar and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: military-arsenal-${{ github.sha }}
+          path: |
+            military-arsenal/build/libs/*.jar
+            military-arsenal/build/reports/tests/
+            military-arsenal/build/test-results/
+            ${{ runner.temp }}/arsenal-build.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Require a successful build
+        if: always()
+        run: test '${{ steps.build.outcome }}' = 'success'
