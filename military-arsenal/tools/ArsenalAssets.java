@@ -42,7 +42,7 @@ public final class ArsenalAssets {
             unlock(w.id,"minecraft:iron_ingot");
         }
         for(Ammo a:Ammo.values()) {
-            write("assets/arsenal/models/item/"+a.id+".json",model(WeaponGeometry.ammunition(a),null,0,true)); models++;
+            write("assets/arsenal/models/item/"+a.id+".json",model(GrenadeGeometry.ammunition(a),null,0,true)); models++;
             write("assets/arsenal/items/"+a.id+".json",Map.of("model",reference("item/"+a.id)));
             en.put("item.arsenal."+a.id,a.en); ru.put("item.arsenal."+a.id,a.ru);
             write("data/arsenal/recipe/"+a.id+".json",Map.of("type","minecraft:crafting_shapeless","category","misc",
@@ -53,8 +53,13 @@ public final class ArsenalAssets {
         localize(en,ru);
         write("assets/arsenal/lang/en_us.json",en); write("assets/arsenal/lang/ru_ru.json",ru);
         Map<String,Object> sounds=new TreeMap<>();
-        for(String name:List.of("pistol","smg","rifle","shotgun","precision","rocket","grenade","reload_out","reload_in","bolt","dry","impact"))
-            sounds.put(name,Map.of("subtitle","subtitles.arsenal."+name,"sounds",List.of(Map.of("name","arsenal:"+name,"stream",false,"attenuation_distance",name.equals("impact")?64:40))));
+        for(String name:List.of("pistol","smg","rifle","shotgun","precision","rocket","grenade","reload_out","reload_in","bolt","dry","impact")) {
+            List<Object> variants=new ArrayList<>();
+            variants.add(Map.of("name","arsenal:"+name,"stream",false,"attenuation_distance",name.equals("impact")?64:40));
+            if(List.of("pistol","smg","rifle","shotgun","precision","rocket","grenade").contains(name))
+                variants.add(Map.of("name","arsenal:"+name+"_2","stream",false,"attenuation_distance",40));
+            sounds.put(name,Map.of("subtitle","subtitles.arsenal."+name,"sounds",variants));
+        }
         write("assets/arsenal/sounds.json",sounds);
         for(String type:List.of("kinetic","piercing","blast")) write("data/arsenal/damage_type/"+type+".json",Map.of("message_id","arsenal."+type,"scaling","when_caused_by_living_non_player","exhaustion",.1));
         tag("is_projectile",List.of("arsenal:kinetic","arsenal:piercing"));
@@ -62,14 +67,14 @@ public final class ArsenalAssets {
         // Vanilla immunity would otherwise silently throttle fast automatic weapons.
         tag("bypasses_cooldown",List.of("arsenal:kinetic","arsenal:piercing"));
         write("assets/arsenal/art_manifest.json",Map.of("weapons",Weapon.values().length,"ammunition",Ammo.values().length,"models",models,"restingWeaponCuboids",parts,"animationFrames",21,"license","CC0-1.0","generator","ArsenalAssets"));
-        System.out.println("Generated "+models+" models, "+parts+" original weapon cuboids, 30 recipes and both localizations");
+        System.out.println("Generated "+models+" models, "+parts+" original weapon cuboids, 32 recipes and both localizations");
     }
     private static Map<String,Object> reference(String id) { return Map.of("type","minecraft:model","model","arsenal:"+id); }
     private static Map<String,Object> transform(List<Double> rotation,List<Double> translation,double scale) { return Map.of("rotation",rotation,"translation",translation,"scale",List.of(scale,scale,scale)); }
     private static Map<String,Object> model(List<WeaponGeometry.Part> parts,Weapon w,int frame,boolean ammo) {
         Map<String,Object> textures=new TreeMap<>();
-        for(String key:COLORS.keySet()) textures.put(key,"arsenal:material/"+key);
-        textures.put("paint","arsenal:material/"+(w==null?"olive":w.id)); textures.put("particle","#steel");
+        for(String key:COLORS.keySet()) textures.put(key,"arsenal:item/material/"+key);
+        textures.put("paint","arsenal:item/material/"+(w==null?"olive":w.id)); textures.put("particle","#steel");
         List<Object> elements=new ArrayList<>();
         for(var part:parts) {
             double x=part.x(),y=part.y(),z=part.z();
@@ -105,7 +110,7 @@ public final class ArsenalAssets {
             int r=Math.clamp(((base>>16)&255)+noise,0,255),g=Math.clamp(((base>>8)&255)+noise,0,255),b=Math.clamp((base&255)+noise,0,255);
             image.setRGB(x,y,0xff000000|(r<<16)|(g<<8)|b);
         }
-        Path file=root.resolve("assets/arsenal/textures/material/"+name+".png"); Files.createDirectories(file.getParent()); ImageIO.write(image,"PNG",file.toFile());
+        Path file=root.resolve("assets/arsenal/textures/item/material/"+name+".png"); Files.createDirectories(file.getParent()); ImageIO.write(image,"PNG",file.toFile());
     }
     private static void unlock(String id,String item) throws Exception {
         write("data/arsenal/advancement/recipes/"+id+".json",Map.of("parent","minecraft:recipes/root","criteria",Map.of("has_material",Map.of("trigger","minecraft:inventory_changed","conditions",Map.of("items",List.of(Map.of("items",item))))),"requirements",List.of(List.of("has_material")),"rewards",Map.of("recipes",List.of("arsenal:"+id))));
@@ -113,14 +118,29 @@ public final class ArsenalAssets {
     private static void tag(String id,List<String> values) throws Exception { write("data/minecraft/tags/damage_type/"+id+".json",Map.of("replace",false,"values",values)); }
     private static void localize(Map<String,Object> en,Map<String,Object> ru) {
         String[][] lines={
+            {"key.arsenal.help","Weapon controls / help","Справка по оружию"},
+            {"hud.arsenal.help","[%s] Controls","[%s] Управление"},
+            {"help.arsenal.title","%s — close help","%s — закрыть справку"},
+            {"help.arsenal.fire","%s — fire","%s — огонь"},
+            {"help.arsenal.aim","%s — hold to aim","%s — держать для прицела"},
+            {"help.arsenal.reload","%s — reload selected ammo","%s — зарядить выбранный тип"},
+            {"help.arsenal.ammo","%s — next ammunition type","%s — следующий тип снаряда"},
+            {"help.arsenal.returned","Old rounds return to inventory; overflow drops nearby.","Старые патроны вернутся в инвентарь; лишние выпадут рядом."},
+            {"help.arsenal.mode","%s — fire mode","%s — режим огня"},
+            {"help.arsenal.inspect","%s — cosmetic inspection","%s — осмотр (только анимация)"},
+            {"help.arsenal.throw","%s with a hand grenade — throw","%s с ручной гранатой — бросок"},
+            {"tooltip.arsenal.throw","Use — throw grenade","Использовать — бросить"},
+            {"tooltip.arsenal.contact","Contact fuse / 2 s in flight","Контактная / 2 с в полёте"},
+            {"message.arsenal.single_ammo","This weapon takes one ammo type","У этого оружия один тип патронов"},
+            {"message.arsenal.ammo_selected","Selected: %s. Reload to load.","Выбрано: %s. Нажмите перезарядку."},
             {"itemGroup.arsenal","Military Arsenal","Военный арсенал"},
             {"key.category.arsenal.controls","Military Arsenal","Военный арсенал"},
             {"key.arsenal.reload","Reload","Перезарядка"},{"key.arsenal.mode","Cycle fire mode","Режим огня"},
-            {"key.arsenal.ammo","Cycle ammo (empty weapon)","Тип патронов (пустое оружие)"},{"key.arsenal.inspect","Inspect weapon","Осмотр оружия"},
+            {"key.arsenal.ammo","Change ammunition","Сменить боеприпасы"},{"key.arsenal.inspect","Inspect weapon","Осмотр оружия"},
             {"mode.arsenal.semi","SEMI","ОДИН"},{"mode.arsenal.auto","AUTO","АВТО"},{"mode.arsenal.burst","BURST ×3","ОЧЕРЕДЬ ×3"},
             {"tooltip.arsenal.magazine","Magazine: %s / %s","Магазин: %s / %s"},
-            {"tooltip.arsenal.controls","Attack: fire · Use: aim · Bindings in Controls","Атака: огонь · Использовать: прицел · Клавиши в настройках"},
-            {"tooltip.arsenal.ammo_cycle","Change ammunition only when empty","Меняйте тип боеприпасов только в пустом оружии"},
+            {"tooltip.arsenal.controls","Controls: see HUD help","Управление: справка в HUD"},
+            {"tooltip.arsenal.ammo_cycle","Change ammo; then reload","Смените тип и перезарядите"},
             {"message.arsenal.empty_before_switch","Empty the weapon before changing ammunition","Для смены боеприпасов оружие должно быть пустым"},
             {"message.arsenal.no_ammo","No matching ammunition in inventory","В инвентаре нет подходящих боеприпасов"},
             {"message.arsenal.projectile_limit","Active projectile limit reached","Достигнут лимит активных снарядов"},
