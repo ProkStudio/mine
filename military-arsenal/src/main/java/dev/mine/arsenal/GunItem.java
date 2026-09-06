@@ -47,6 +47,5 @@ public final class GunItem extends Item {
         out.accept(Text.translatable("item.arsenal."+m.ammo().id).formatted(Formatting.GRAY));
         out.accept(Text.translatable("mode.arsenal."+m.mode().name().toLowerCase(java.util.Locale.ROOT)).formatted(Formatting.AQUA));
         out.accept(Text.translatable("tooltip.arsenal.controls").formatted(Formatting.DARK_GRAY));
-        if(weapon.ammunition.size()>1) out.accept(Text.translatable("tooltip.arsenal.ammo_cycle").formatted(Formatting.GRAY));
     }
 }

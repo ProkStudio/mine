@@ -31,7 +31,7 @@ public final class Arsenal implements ModInitializer {
     @Override public void onInitialize() {
         CONFIG=ArsenalConfig.load();
         for(Weapon w:Weapon.values()) GUNS.put(w,Registry.register(Registries.ITEM,id(w.id),new GunItem(settings(w.id).maxCount(1),w)));
-        for(Ammo a:Ammo.values()) AMMO.put(a,Registry.register(Registries.ITEM,id(a.id),new Item(settings(a.id).maxCount(a.projectile()?16:64))));
+        for(Ammo a:Ammo.values()) AMMO.put(a,Registry.register(Registries.ITEM,id(a.id),a.handGrenade()?new GrenadeItem(settings(a.id).maxCount(16)):new Item(settings(a.id).maxCount(a.projectile()?16:64))));
         var entityKey=RegistryKey.of(RegistryKeys.ENTITY_TYPE,id("projectile"));
         PROJECTILE=Registry.register(Registries.ENTITY_TYPE,entityKey,EntityType.Builder.<ArsenalProjectile>create(ArsenalProjectile::new,SpawnGroup.MISC)
             .dimensions(.22f,.22f).maxTrackingRange(8).trackingTickInterval(1).disableSaving().build(entityKey));

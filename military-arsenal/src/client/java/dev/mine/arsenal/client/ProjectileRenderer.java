@@ -22,21 +22,24 @@ public final class ProjectileRenderer extends EntityRenderer<ArsenalProjectile,P
         super(context); shadowRadius=.12f;
         for(Ammo a:Ammo.values()) {
             List<Part> parts=new ArrayList<>();
-            for(var box:WeaponGeometry.ammunition(a)) {
+            for(var box:GrenadeGeometry.ammunition(a)) {
                 ModelData data=new ModelData();
                 data.getRoot().addChild("mesh",ModelPartBuilder.create().uv(0,0).cuboid((float)box.x()-8,(float)box.y()-8,(float)box.z()-8,(float)box.w(),(float)box.h(),(float)box.d()),ModelTransform.origin(0,0,0));
-                parts.add(new Part(TexturedModelData.of(data,32,32).createModel(),Arsenal.id("textures/material/"+box.material()+".png")));
+                parts.add(new Part(TexturedModelData.of(data,32,32).createModel(),Arsenal.id("textures/item/material/"+box.material()+".png")));
             }
             meshes.put(a,List.copyOf(parts));
         }
     }
     @Override public State createRenderState() { return new State(); }
     @Override public void updateRenderState(ArsenalProjectile entity,State state,float delta) {
-        super.updateRenderState(entity,state,delta); state.ammo=Arsenal.ammo(entity.getStack()); state.yaw=entity.getYaw(); state.pitch=entity.getPitch();
+        super.updateRenderState(entity,state,delta); state.ammo=Arsenal.ammo(entity.getStack());
+        var velocity=entity.getVelocity();
+        var rotation=FlightOrientation.of(velocity.x,velocity.y,velocity.z,state.yaw,state.pitch);
+        state.yaw=rotation.yaw(); state.pitch=rotation.pitch();
     }
     @Override public void render(State state,MatrixStack matrices,OrderedRenderCommandQueue queue,CameraRenderState camera) {
         super.render(state,matrices,queue,camera); matrices.push();
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180-state.yaw)); matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-state.pitch));
+        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(state.yaw)); matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(state.pitch));
         matrices.scale(.6f,.6f,.6f);
         for(Part part:meshes.get(state.ammo)) queue.getBatchingQueue(0).submitModelPart(part.mesh,matrices,RenderLayers.entityCutoutNoCull(part.texture),state.light,OverlayTexture.DEFAULT_UV,null,0xffffffff,null);
         matrices.pop();
