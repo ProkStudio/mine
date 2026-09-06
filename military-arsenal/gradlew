@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+set -eu
+DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if [ -f "$DIR/../gradlew" ]; then exec sh "$DIR/../gradlew" -p "$DIR" "$@"; fi
+if command -v gradle >/dev/null 2>&1; then exec gradle -p "$DIR" "$@"; fi
+printf '%s\n' 'Use this folder inside ProkStudio/mine, or install Gradle 9.2.0. JDK 21 is required.' >&2
+exit 1
