@@ -9,6 +9,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
+import net.minecraft.util.Hand;
 import java.util.*;
 import static dev.mine.arsenal.ArsenalPackets.*;
 
@@ -20,6 +21,7 @@ public final class WeaponService {
         ItemStack stack=ItemStack.EMPTY;
         Object world;
         int input,previous,latched;
+        long nextGrenade;
         long received=-1000,shot=-1000,reload=-1,inspect=-1,lastAction=-1000,dry=-1000;
     }
     private final Map<UUID,Session> sessions=new HashMap<>();
@@ -73,8 +75,16 @@ public final class WeaponService {
             s.lastAction=clock;
             if((actions&MODE)!=0) { m=m.cycleMode(w); gun.magazine(held,m); s.trigger.interrupt(); message(p,"mode.arsenal."+m.mode().name().toLowerCase(Locale.ROOT)); }
             if((actions&AMMO)!=0) {
-                if(m.rounds()==0 && s.reload<0) { m=m.cycleAmmo(w); gun.magazine(held,m); message(p,"item.arsenal."+m.ammo().id); }
-                else message(p,"message.arsenal.empty_before_switch");
+                if(w.ammunition.size()==1) message(p,"message.arsenal.single_ammo");
+                else {
+                    cancel(p,s);
+                    Ammo oldAmmo=m.ammo(); int returned=m.rounds();
+                    m=new Magazine(0,oldAmmo,m.mode()).cycleAmmo(w);
+                    // Commit the empty magazine first. Return its original type, never the new type.
+                    gun.magazine(held,m);
+                    if(!p.isCreative() && returned>0) returnAmmo(p,oldAmmo,returned);
+                    p.sendMessage(Text.translatable("message.arsenal.ammo_selected",Text.translatable("item.arsenal."+m.ammo().id)),true);
+                }
             }
             if((actions&RELOAD)!=0 && s.reload<0 && m.rounds()<w.capacity) {
                 if(p.isCreative()||available(p,m.ammo())>0) startReload(p,s,w);
@@ -109,6 +119,39 @@ public final class WeaponService {
         int frame=s.reload>=0?Animation.reloadFrame(clock-s.reload,w.reloadTicks):s.inspect>=0?Animation.inspectFrame(clock-s.inspect):Animation.shotFrame(clock-s.shot);
         GunItem.pose(held,frame,aim&&s.reload<0,s.reload>=0);
         s.previous=input;
+    }
+    /** Vanilla use packets still go through server cooldowns and the shared projectile budget. */
+    public void throwGrenade(ServerPlayerEntity p,Hand hand) {
+        ItemStack held=p.getStackInHand(hand);
+        if(!(held.getItem() instanceof GrenadeItem) || held.isEmpty() || !p.isAlive() || p.isSpectator()
+            || !Arsenal.CONFIG.enabled || p.currentScreenHandler!=p.playerScreenHandler) return;
+        Session s=sessions.computeIfAbsent(p.getUuid(),id->new Session());
+        if(clock<s.nextGrenade) return;
+        while(!s.projectiles.isEmpty() && s.projectiles.peekFirst()<=clock-100) s.projectiles.removeFirst();
+        if(s.projectiles.size()>=Arsenal.CONFIG.projectileLimitPerPlayer) {
+            s.nextGrenade=clock+20; message(p,"message.arsenal.projectile_limit"); return;
+        }
+        Ammo ammo=Arsenal.ammo(held);
+        var world=(ServerWorld)p.getEntityWorld();
+        var projectile=new ArsenalProjectile(Arsenal.PROJECTILE,world);
+        projectile.setOwner(p); projectile.setItem(new ItemStack(Arsenal.AMMO.get(ammo)));
+        projectile.setPosition(p.getX(),p.getEyeY()-.1,p.getZ());
+        var direction=p.getRotationVec(1);
+        projectile.setVelocity(direction.x,direction.y,direction.z,(float)ammo.velocity,0);
+        if(world.spawnEntity(projectile)) {
+            s.nextGrenade=clock+20; s.projectiles.addLast(clock); s.received=clock;
+            if(!p.isCreative()) { held.decrement(1); p.getInventory().markDirty(); }
+            sound(p,"reload_out",.45f,1.25f);
+        }
+    }
+    private static void returnAmmo(ServerPlayerEntity p,Ammo ammo,int count) {
+        while(count>0) {
+            ItemStack returned=new ItemStack(Arsenal.AMMO.get(ammo));
+            int amount=Math.min(count,returned.getMaxCount()); returned.setCount(amount); count-=amount;
+            p.getInventory().insertStack(returned);
+            if(!returned.isEmpty()) p.dropItem(returned,false);
+        }
+        p.getInventory().markDirty();
     }
     private void startReload(ServerPlayerEntity p,Session s,Weapon w) {
         s.reload=clock; s.inspect=-1; s.trigger.interrupt(); sound(p,"reload_out",.6f,1);

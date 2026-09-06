@@ -21,7 +21,8 @@ import static dev.mine.arsenal.ArsenalPackets.*;
 
 /** Cosmetic prediction only. The server confirms every shot and every inventory write. */
 public final class ArsenalClient implements ClientModInitializer {
-    private static KeyBinding reload,mode,ammo,inspect;
+    private static KeyBinding reload,mode,ammo,inspect,help;
+    private static boolean showHelp;
     private static double time,shot=-1000,hit=-1000,reloadStart=-1000,inspectStart=-1000,ads,previousAds;
     private static int reloadDuration;
     private static ItemStack previous=ItemStack.EMPTY;
@@ -34,6 +35,7 @@ public final class ArsenalClient implements ClientModInitializer {
         mode=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.arsenal.mode",GLFW.GLFW_KEY_V,category));
         ammo=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.arsenal.ammo",GLFW.GLFW_KEY_B,category));
         inspect=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.arsenal.inspect",GLFW.GLFW_KEY_H,category));
+        help=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.arsenal.help",GLFW.GLFW_KEY_K,category));
         EntityRendererRegistry.register(Arsenal.PROJECTILE,ProjectileRenderer::new);
         ClientPlayNetworking.registerGlobalReceiver(Feedback.ID,(payload,context)->{
             if(context.client().player==null || payload.entity()!=context.client().player.getId()) return;
@@ -51,7 +53,7 @@ public final class ArsenalClient implements ClientModInitializer {
         HudElementRegistry.addLast(Arsenal.id("weapon_hud"),(context,counter)->hud(context));
     }
     private static boolean drain(KeyBinding binding) { boolean result=false; while(binding.wasPressed()) result=true; return result; }
-    private static void reset() { time=0; shot=hit=reloadStart=inspectStart=-1000; reloadDuration=0; ads=previousAds=0; previous=ItemStack.EMPTY; wasArmed=tap=false; world=null; }
+    private static void reset() { showHelp=false; time=0; shot=hit=reloadStart=inspectStart=-1000; reloadDuration=0; ads=previousAds=0; previous=ItemStack.EMPTY; wasArmed=tap=false; world=null; }
     private static void tick(MinecraftClient c) {
         if(c.player==null || c.world==null) { reset(); return; }
         if(world!=c.world) { reset(); world=c.world; }
@@ -61,7 +63,8 @@ public final class ArsenalClient implements ClientModInitializer {
         // Only actual item/slot changes reset animation, not server component synchronization.
         if(held.getItem()!=previous.getItem()) { shot=hit=reloadStart=inspectStart=-1000; reloadDuration=0; ads=previousAds=0; }
         previous=held;
-        boolean r=drain(reload),m=drain(mode),a=drain(ammo),i=drain(inspect);
+        boolean r=drain(reload),m=drain(mode),a=drain(ammo),i=drain(inspect),h=drain(help);
+        if(h && c.currentScreen==null) showHelp=!showHelp;
         int keys=0;
         if(armed && c.currentScreen==null && !c.player.isSpectator() && c.player.isAlive()) {
             if(c.options.attackKey.isPressed()||tap) keys|=FIRE;
@@ -97,11 +100,34 @@ public final class ArsenalClient implements ClientModInitializer {
         matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees((float)(hand*18*look)));
         if(aim<.2 && !GunItem.reloading(stack)) matrices.translate(Math.sin(now*.08)*.003,Math.cos(now*.12)*.002,0);
     }
+    private static void helpHud(DrawContext g) {
+        int width=CLIENT.getWindow().getScaledWidth(),height=CLIENT.getWindow().getScaledHeight();
+        int panel=Math.min(228,width-16),y=14;
+        var rows=new java.util.ArrayList<net.minecraft.text.OrderedText>();
+        Text[] lines={
+            Text.translatable("help.arsenal.title",help.getBoundKeyLocalizedText()),
+            Text.translatable("help.arsenal.fire",CLIENT.options.attackKey.getBoundKeyLocalizedText()),
+            Text.translatable("help.arsenal.aim",CLIENT.options.useKey.getBoundKeyLocalizedText()),
+            Text.translatable("help.arsenal.reload",reload.getBoundKeyLocalizedText()),
+            Text.translatable("help.arsenal.ammo",ammo.getBoundKeyLocalizedText()),
+            Text.translatable("help.arsenal.returned"),
+            Text.translatable("help.arsenal.mode",mode.getBoundKeyLocalizedText()),
+            Text.translatable("help.arsenal.inspect",inspect.getBoundKeyLocalizedText()),
+            Text.translatable("help.arsenal.throw",CLIENT.options.useKey.getBoundKeyLocalizedText())
+        };
+        for(Text line:lines) rows.addAll(CLIENT.textRenderer.wrapLines(line,panel-16));
+        g.fill(8,y-6,8+panel,Math.min(height-8,y+rows.size()*11+6),0xef1c2428);
+        for(var line:rows) { if(y+10>height-8) break; g.drawText(CLIENT.textRenderer,line,16,y,0xffe8e9e5,false); y+=11; }
+    }
     private static void hud(DrawContext g) {
-        if(!holdingGun() || CLIENT.options.hudHidden || CLIENT.currentScreen!=null) return;
+        if(CLIENT.player==null || CLIENT.options.hudHidden || CLIENT.currentScreen!=null) return;
+        if(showHelp) helpHud(g);
+        if(!holdingGun()) return;
         ItemStack stack=CLIENT.player.getMainHandStack(); GunItem gun=(GunItem)stack.getItem(); Magazine state=gun.magazine(stack);
         int width=CLIENT.getWindow().getScaledWidth(),height=CLIENT.getWindow().getScaledHeight();
-        int panelWidth=Math.min(210,width-16),x=width-panelWidth-8,y=height-89;
+        int panelWidth=Math.min(190,width-16),x=width-panelWidth-8,y=height-101;
+        String hint=Text.translatable("hud.arsenal.help",help.getBoundKeyLocalizedText()).getString();
+        g.drawText(CLIENT.textRenderer,CLIENT.textRenderer.trimToWidth(hint,panelWidth-8),x+4,y-12,0xffcfdcdd,true);
         g.fill(x,y,width-8,y+58,0xd51c2428); g.fill(x,y,x+2,y+58,0xff80b5b0);
         String name=CLIENT.textRenderer.trimToWidth(stack.getName().getString(),panelWidth-16);
         g.drawText(CLIENT.textRenderer,name,x+9,y+6,0xffe8e9e5,true);

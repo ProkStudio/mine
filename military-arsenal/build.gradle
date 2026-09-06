@@ -58,7 +58,8 @@ processResources {
     dependsOn generateArsenalArt,generateArsenalAudio
     from generatedArt; from generatedAudio
     inputs.property 'version',project.version
-    filesMatching('fabric.mod.json') { expand 'version':project.version }
+    inputs.property 'loader_version',project.loader_version
+    filesMatching('fabric.mod.json') { expand 'version':project.version, 'loader_version':project.loader_version }
 }
 tasks.register('validateArsenalResources') {
     dependsOn processResources
@@ -66,9 +67,9 @@ tasks.register('validateArsenalResources') {
         def root=tasks.named('processResources').get().destinationDir
         def slurper=new groovy.json.JsonSlurper()
         def manifest=slurper.parse(new File(root,'assets/arsenal/art_manifest.json'))
-        assert manifest.weapons==16 && manifest.ammunition==14 && manifest.models==350
+        assert manifest.weapons==16 && manifest.ammunition==16 && manifest.models==352
         def definitions=fileTree(new File(root,'assets/arsenal/items')).matching { include '*.json' }.files
-        assert definitions.size()==30
+        assert definitions.size()==32
         def validateNode
         validateNode={ node ->
             if(node instanceof Map) {
@@ -78,7 +79,7 @@ tasks.register('validateArsenalResources') {
         }
         definitions.each { validateNode(slurper.parse(it)) }
         def models=fileTree(new File(root,'assets/arsenal/models')).matching { include '**/*.json' }.files
-        assert models.size()==350
+        assert models.size()==352
         models.each { file ->
             def m=slurper.parse(file)
             ['gui','ground','fixed','firstperson_righthand','firstperson_lefthand','thirdperson_righthand','thirdperson_lefthand'].each { assert m.display[it]!=null }
@@ -87,7 +88,7 @@ tasks.register('validateArsenalResources') {
                 e.faces.values().each { face -> assert m.textures[face.texture.substring(1)]!=null }
             }
             m.textures.values().findAll { !it.startsWith('#') }.each { t ->
-                assert t.startsWith('arsenal:')
+                assert t.startsWith('arsenal:item/material/') : "Texture is outside the vanilla item atlas: ${t}"
                 assert javax.imageio.ImageIO.read(new File(root,'assets/arsenal/textures/'+t.substring(8)+'.png'))!=null
             }
         }
@@ -98,7 +99,7 @@ tasks.register('validateArsenalResources') {
             assert bytes.length>100 && new String(bytes,0,4,'US-ASCII')=='OggS'
             assert new String(bytes,0,Math.min(128,bytes.length),'ISO-8859-1').contains('vorbis')
         } }
-        assert fileTree(new File(root,'data/arsenal/recipe')).matching { include '*.json' }.files.size()==30
+        assert fileTree(new File(root,'data/arsenal/recipe')).matching { include '*.json' }.files.size()==32
         def en=slurper.parse(new File(root,'assets/arsenal/lang/en_us.json')),ru=slurper.parse(new File(root,'assets/arsenal/lang/ru_ru.json'))
         assert en.keySet()==ru.keySet()
     }
@@ -106,3 +107,20 @@ tasks.register('validateArsenalResources') {
 check.dependsOn validateArsenalResources
 jar { from('LICENSE') { rename { 'LICENSE_military-arsenal' } } }
 tasks.named('sourcesJar') { from('tools') { into 'generators' } }
+
+tasks.register('validateArsenalJar') {
+    dependsOn remapJar
+    doLast {
+        def archive=tasks.named('remapJar').get().archiveFile.get().asFile
+        def slurper=new groovy.json.JsonSlurper()
+        new java.util.zip.ZipFile(archive).withCloseable { zip ->
+            def meta=slurper.parse(zip.getInputStream(zip.getEntry('fabric.mod.json')))
+            assert meta.depends.fabricloader=='>=0.19.2'
+            assert meta.version==project.version.toString()
+            ['frag_grenade','smoke_grenade'].each { id -> assert zip.getEntry("assets/arsenal/items/${id}.json")!=null }
+            assert zip.getEntry('assets/arsenal/textures/item/material/steel.png')!=null
+            assert zip.getEntry('assets/arsenal/sounds/rifle_2.ogg')!=null
+        }
+    }
+}
+check.dependsOn validateArsenalJar
