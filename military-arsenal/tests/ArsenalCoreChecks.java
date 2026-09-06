@@ -6,7 +6,7 @@ public final class ArsenalCoreChecks {
     private static int checks;
     private static void check(boolean ok,String description) { checks++; if(!ok) throw new AssertionError(description); }
     public static void catalog() {
-        check(Weapon.values().length==16,"weapon count"); check(Ammo.values().length==14,"ammo count");
+        check(Weapon.values().length==16,"weapon count"); check(Ammo.values().length==16,"ammo count");
         Set<String> ids=new HashSet<>();
         for(Weapon w:Weapon.values()) {
             check(ids.add(w.id),"unique weapon id"); check(w.capacity>0&&w.reloadTicks>0&&w.interval>0,"positive timings");
@@ -17,7 +17,11 @@ public final class ArsenalCoreChecks {
                 check(p.x()>=-16&&p.y()>=-16&&p.z()>=-16&&p.x()+p.w()<=32&&p.y()+p.h()<=32&&p.z()+p.d()<=32,"model envelope");
             }
         }
-        for(Ammo a:Ammo.values()) check(ids.add(a.id),"unique ammo id");
+        for(Ammo a:Ammo.values()) {
+            check(ids.add(a.id),"unique ammo id");
+            for(var p:GrenadeGeometry.ammunition(a))
+                check(p.w()>0&&p.h()>0&&p.d()>0&&p.x()>=-16&&p.y()>=-16&&p.z()>=-16&&p.x()+p.w()<=32&&p.y()+p.h()<=32&&p.z()+p.d()<=32,"ammo model envelope");
+        }
         check(Ammo.ROCKET_PRACTICE.damage==0&&Ammo.ROCKET_PRACTICE.radius==0,"inert training round");
         check(Ammo.ROCKET_AP.piercing&&Ammo.ROCKET_AP.radius<Ammo.ROCKET_HE.radius,"AP differs from HE");
     }
@@ -26,6 +30,13 @@ public final class ArsenalCoreChecks {
             Magazine empty=Magazine.read(w,-5,"broken","broken");
             check(empty.rounds()==0&&w.ammunition.contains(empty.ammo())&&w.modes.contains(empty.mode()),"sanitized empty");
             check(Magazine.read(w,999,"broken","broken").rounds()==w.capacity,"clamped capacity");
+            for(Ammo a:w.ammunition) for(int count=0;count<=w.capacity;count++) {
+                Magazine loaded=new Magazine(count,a,w.modes.getFirst());
+                int returned=loaded.rounds();
+                Magazine changed=new Magazine(0,loaded.ammo(),loaded.mode()).cycleAmmo(w);
+                check(returned+changed.rounds()==count,"switch preserves total rounds");
+                check(changed.ammo()==w.ammunition.get((w.ammunition.indexOf(a)+1)%w.ammunition.size()),"switch chooses next type");
+            }
             Magazine partial=empty.reload(w,2);
             check(partial.rounds()==Math.min(w.shellReload()?1:2,w.capacity),"partial reload");
             check(partial.cycleAmmo(w).ammo()==partial.ammo(),"no loaded ammo conversion");
@@ -64,6 +75,17 @@ public final class ArsenalCoreChecks {
         interrupted.tick(1,false,false,Weapon.Mode.BURST,3); check(!interrupted.tick(10,false,true,Weapon.Mode.BURST,3),"cancelled burst stays cancelled");
     }
     public static void animation() {
+        for(double[] v:new double[][]{{0,0,-1},{0,0,1},{1,0,0},{-1,0,0},{1,1,1},{-1,-2,3},{0,1,0},{0,-1,0}}) {
+            var f=FlightOrientation.of(v[0],v[1],v[2],0,0);
+            double y=Math.toRadians(f.yaw()),p=Math.toRadians(f.pitch());
+            double[] nose={-Math.sin(y)*Math.cos(p),Math.sin(p),-Math.cos(y)*Math.cos(p)};
+            double length=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+            for(int i=0;i<3;i++) check(Math.abs(nose[i]-v[i]/length)<1e-6,"mesh nose follows velocity");
+        }
+        check(FlightOrientation.of(0,0,0,33,12).equals(new FlightOrientation(33,12)),"stationary rotation stable");
+        check(FlightOrientation.of(Double.NaN,0,0,33,12).equals(new FlightOrientation(33,12)),"invalid rotation safe");
+        check(Ammo.HAND_HE.handGrenade() && Ammo.HAND_SMOKE.handGrenade(),"hand grenades registered");
+        check(!Weapon.ARC.ammunition.contains(Ammo.HAND_HE),"hand grenades are not launcher rounds");
         check(Animation.shotFrame(-1)==0&&Animation.shotFrame(4)==0,"shot boundaries");
         check(Animation.reloadFrame(0,40)==10&&Animation.reloadFrame(40,40)==17,"reload frames");
         check(Math.abs(Animation.magazineTravel(10))<1e-8&&Math.abs(Animation.magazineTravel(17))<1e-8,"magazine returns home");
