@@ -11,14 +11,15 @@ public final class WeaponGeometry {
         parts.add(new Part(name,mat,x,y,z,w,h,d));
     }
     private void tube(String name,String mat,double y,double z,double radius,double length) {
+        // Adjacent strips, not intersecting coplanar end caps: prevents texture z-fighting.
         box(name,mat,8-radius*.72,y-radius,z,radius*1.44,radius*2,length);
-        box(name,mat,8-radius,y-radius*.72,z,radius*2,radius*1.44,length);
+        box(name,mat,8-radius,y-radius*.72,z,radius*.28,radius*1.44,length);
+        box(name,mat,8+radius*.72,y-radius*.72,z,radius*.28,radius*1.44,length);
     }
     private void grip(double z,String material) {
         box("grip",material,6.7,1.5,z,2.6,6,3);
         for(int i=0;i<4;i++) box("grip_rib","rubber",6.5,2+i, z-.1,3,.3,3.2);
-        box("guard","steel",6.7,4.1,z-4, .45,3.7,4.1);
-        box("guard","steel",8.85,4.1,z-4,.45,3.7,4.1);
+        box("guard","steel",6.7,4.1,z-4,2.6,3.7,.45);
         box("guard","steel",6.7,3.8,z-4,2.6,.45,4.1);
         box("trigger","dark",7.8,5.3,z-2.4,.4,1.8,.6);
     }
@@ -63,7 +64,7 @@ public final class WeaponGeometry {
             g.box("frame","paint",6.3,7,5,3.4,3.5,10);
             g.grip(11,w==Weapon.MARSHAL?"wood":"rubber");
             g.tube("barrel","steel",10.5,5-barrel,.8,barrel+6);
-            g.tube("muzzle","dark",10.5,4.9-barrel,.5,.15);
+            g.tube("muzzle","dark",10.5,4.35-barrel,.55,.12);
             if(w==Weapon.MARSHAL) {
                 g.tube("cylinder","steel",9.8,7,2.1,4.8);
                 for(int i=0;i<3;i++) g.box("cylinder_groove","dark",5.85,8.6+i,7,.2,.4,4);
@@ -73,13 +74,16 @@ public final class WeaponGeometry {
                 g.box("ejection_port","dark",9.82,10.5,6.8,.12,1,3);
                 for(int i=0;i<4;i++) g.box("slide_serration","dark",6.08,10.3,11.2+i*.7,.15,1.3,.3);
             }
-            g.box("mag","paint",6.7,1.3,11,2.6,.6,3.3);
+            if(w!=Weapon.MARSHAL) {
+                g.box("mag","steel",6.85,1.5,11.2,2.3,5.25,2.6);
+                g.box("mag","paint",6.5,1,10.8,3,.5,3.5);
+            }
             g.sights(5-barrel,13.7,false);
         } else {
             double front=w.style==Weapon.Style.SNIPER?-14:w.style==Weapon.Style.DMR?-11:w.style==Weapon.Style.SMG?0:-8;
             double rear=w.style==Weapon.Style.SMG?18:25;
             g.box("receiver","paint",6.15,7.8,4,3.7,4.3,12);
-            g.tube("barrel","steel",10.3,front, .8,7-front);
+            g.tube("barrel","steel",10.3,front,.8,7-front);
             g.tube("muzzle","dark",10.3,front-.18,.5,.2);
             g.box("handguard","paint",5.9,8,front+3,4.2,3.9,Math.max(2,3-front));
             for(int i=0;i<5;i++) {
@@ -125,7 +129,6 @@ public final class WeaponGeometry {
                 g.box("handle_post","steel",6.7,12.7,5,2.6,1.5,.7);
                 g.box("handle_post","steel",6.7,12.7,12.3,2.6,1.5,.7);
             }
-            if(w==Weapon.BASTION) g.box("accent","brass",6,9,8,.1,1,3);
         }
         g.box("selector","steel",5.98,8.5,12,.2,.7,1.5);
         g.box("pin","brass",9.97,8.7,14,.16,.55,.55);
