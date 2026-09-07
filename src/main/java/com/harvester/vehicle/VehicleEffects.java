@@ -21,7 +21,7 @@ public final class VehicleEffects {
         var type=vehicle.variant(); var family=type.family;
         if(type.verticalAircraft()) {
             if(!vehicle.isEngineActive() || vehicle.isEngineFlooded()) return;
-            double radius=Math.min(1.1,type.width*.55);
+            double radius=Math.min(1.1,type.blueprintWidth*.55);
             for(int side:new int[]{-1,1}) for(int front:new int[]{-1,1}) {
                 Vec3d at=vehicle.localEffect(side*radius,0,front*radius);
                 var ground=VehicleGround.sample(world,at.x,vehicle.getY()+.1,at.z,5);
@@ -33,7 +33,7 @@ public final class VehicleEffects {
         }
         if(family==VehicleType.Family.BOAT) {
             if(!moving || !vehicle.isTouchingWater()) return;
-            double rear=type==VehicleType.BOAT_CARGO?-1.48:-1.30;
+            double rear=-VehicleGeometry.boatLength(type)/32.0;
             for(double side:new double[]{-.45,.45}) {
                 Vec3d at=vehicle.localEffect(side,.3,rear);
                 var ground=VehicleGround.sample(world,at.x,vehicle.getY()+.8,at.z,2);
@@ -42,7 +42,7 @@ public final class VehicleEffects {
             return;
         }
         if(moving && vehicle.isOnGround() && !type.aircraft()) {
-            double side=family==VehicleType.Family.MOTORCYCLE?.12:Math.min(type.width*.43,1.08);
+            double side=family==VehicleType.Family.MOTORCYCLE?.12:Math.min(type.blueprintWidth*.43,1.08);
             double rear=family==VehicleType.Family.MOTORCYCLE?-.75:-.7;
             for(int s:new int[]{-1,1}) {
                 Vec3d at=vehicle.localEffect(side*s,.1,rear);
@@ -55,9 +55,9 @@ public final class VehicleEffects {
         Vec3d at=switch(family) {
             case COMBINE -> vehicle.localEffect(.81,2.53,-.69);
             case DOZER -> vehicle.localEffect(.61,2.13,.49);
-            case PICKUP -> vehicle.localEffect(.73,.43,type==VehicleType.PICKUP_CARGO?-1.25:-1.10);
+            case PICKUP -> vehicle.localEffect(-8.25/16,5.25/16,(type==VehicleType.PICKUP_CARGO?-19.8:-17.3)/16);
             case MOTORCYCLE -> vehicle.localEffect(.36,.48,-.87);
-            case PLANE -> vehicle.localEffect(.39,.62,type==VehicleType.PLANE_CARGO?1.62:1.31);
+            case PLANE -> vehicle.localEffect(.45,.61,.62);
             default -> vehicle.localEffect(0,.5,-1);
         };
         BlockPos pos=BlockPos.ofFloored(at.x,at.y,at.z);

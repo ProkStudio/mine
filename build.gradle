@@ -35,7 +35,11 @@ tasks.register('compileVehicleArt', JavaCompile) {
         'src/main/java/com/harvester/vehicle/VehicleGeometry.java',
         'src/main/java/com/harvester/vehicle/VehicleDetailing.java',
         'src/main/java/com/harvester/vehicle/VehicleAtlas.java',
-        'src/main/java/com/harvester/vehicle/VehicleType.java')
+        'src/main/java/com/harvester/vehicle/VehicleType.java',
+        'src/main/java/com/harvester/vehicle/VehicleAssembly.java',
+        'src/main/java/com/harvester/vehicle/VehicleMechanics.java',
+        'src/main/java/com/harvester/vehicle/VehicleSoundEnvelope.java',
+        'tools/src/VehiclePolishSmoke.java')
     classpath = files()
     destinationDirectory = artClasses
     javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
@@ -136,6 +140,14 @@ tasks.register('validateVehicleResources') {
         assert !fileTree('src/main/resources/data').matching { include '**/recipe/**/*.json'; include '**/recipes/**/*.json' }.files
     }
 }
-check.dependsOn transportRules, validateVehicleResources
+tasks.register('transportPolishSmoke', JavaExec) {
+    dependsOn compileVehicleArt
+    classpath = files(artClasses)
+    mainClass = 'VehiclePolishSmoke'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    args layout.buildDirectory.dir('polish-meshes').get().asFile.absolutePath
+}
+tasks.withType(AbstractArchiveTask).configureEach { preserveFileTimestamps=false; reproducibleFileOrder=true }
+check.dependsOn transportRules, validateVehicleResources, transportPolishSmoke
 jar { from('LICENSE') { rename { "${it}_${project.name}" } } }
 apply from: 'gradle/vehicle-audio.gradle'

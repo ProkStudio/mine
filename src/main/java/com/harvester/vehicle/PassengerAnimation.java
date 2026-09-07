@@ -70,6 +70,7 @@ public final class PassengerAnimation {
         return new Grip(x*Math.cos(a),5+x*Math.sin(a),8);
     }
     private static Joint arm(int side,Grip grip,double pitch,double roll) {
+        grip=new Grip(grip.x()*VehicleType.MODEL_SCALE,grip.y()*VehicleType.MODEL_SCALE,grip.z()*VehicleType.MODEL_SCALE);
         // Undo the extra whole-rider lean before solving the shoulder-to-control direction.
         double cr=Math.cos(-roll),sr=Math.sin(-roll),cp=Math.cos(-pitch),sp=Math.sin(-pitch);
         double x=grip.x()*cr-grip.y()*sr,y=grip.x()*sr+grip.y()*cr;

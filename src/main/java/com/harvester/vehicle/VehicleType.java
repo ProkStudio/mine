@@ -18,17 +18,20 @@ public enum VehicleType {
     HELICOPTER_CARGO("helicopter_cargo", Family.HELICOPTER, "Вертолёт грузовой", .26, 3200, 160, 36, 0, 1, 3f, 2.6f),
     DRONE("drone", Family.DRONE, "Дрон", .24, 800, 50, 9, 0, 1, 1.3f, 1.5f),
     DRONE_CARGO("drone_cargo", Family.DRONE, "Дрон грузовой", .20, 1200, 70, 18, 0, 1, 1.6f, 1.5f);
+    /** One shared world scale; UVs and blueprint dimensions stay unchanged. */
+    public static final float MODEL_SCALE=1.125f;
     public enum Family { COMBINE, DOZER, PICKUP, MOTORCYCLE, BOAT, PLANE, HELICOPTER, DRONE }
     public final String id, displayName;
     public final Family family;
     public final double speed;
     public final int tank, durability, slots, radius, seats;
-    public final float width, height;
+    public final float width, height, blueprintWidth, blueprintHeight;
     VehicleType(String id, Family family, String name, double speed, int tank, int durability,
                 int slots, int radius, int seats, float width, float height) {
         this.id=id; this.family=family; this.displayName=name; this.speed=speed; this.tank=tank;
         this.durability=durability; this.slots=slots; this.radius=radius; this.seats=seats;
-        this.width=width; this.height=height;
+        this.blueprintWidth=width; this.blueprintHeight=height;
+        this.width=width*MODEL_SCALE; this.height=height*MODEL_SCALE;
     }
     public boolean aircraft() { return family==Family.PLANE || verticalAircraft(); }
     public boolean verticalAircraft() { return family==Family.HELICOPTER || family==Family.DRONE; }

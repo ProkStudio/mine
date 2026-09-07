@@ -113,13 +113,16 @@ public final class VehicleGeometry {
         }
     }
     public static List<Part> create(VehicleType type) {
+        return VehicleAssembly.complete(type,blueprint(type));
+    }
+    private static List<Part> blueprint(VehicleType type) {
         if(type.family==VehicleType.Family.PLANE) return VehicleDetailing.biplane(type);
         if(type.family==VehicleType.Family.HELICOPTER) return VehicleDetailing.helicopter(type);
         Builder b=new Builder();
         boolean cargo=type.slots>switch(type.family) { case COMBINE,DOZER,PICKUP -> 27; case MOTORCYCLE,DRONE -> 9; default -> 18; };
         switch(type.family) {
             case COMBINE -> {
-                double w=type.width*16;
+                double w=type.blueprintWidth*16;
                 b.add("dark",-15,8,-21,30,3,42); b.add("paint",-15,11,-20,30,13,27);
                 b.add("paint",-12,24,-18,24,5,15); b.add("dark",-10,29,-16,20,.5,11);
                 for(int side:new int[]{-1,1}) { b.add("metal",side*12-.4,28,-18,.8,5,15); b.vents(side*15.2,13,-15,6); b.add("paint",side*15-3,18,5,6,1,14); }
@@ -138,7 +141,7 @@ public final class VehicleGeometry {
                 if(cargo) b.add("paint",-12,29,-18,24,3,1);
             }
             case DOZER -> {
-                double w=type.width*16;
+                double w=type.blueprintWidth*16;
                 b.add("dark",-15,6,-18,30,4,36); b.add("paint",-12,10,-17,24,8,28);
                 b.cabin(18,18,14,-10,17); b.add("paint",-11,13,7,22,8,9);
                 b.vents(-11.3,14,8,4); b.vents(11.1,14,8,4);
@@ -177,7 +180,7 @@ public final class VehicleGeometry {
                 if(cargo) for(int side:new int[]{-1,1}) { b.add("seat",side*5-2,8,-13,4,6,7); b.add("metal",side*5-2,14,-13,4,.5,7); }
             }
             case BOAT -> {
-                double w=type.width*16,length=boatLength(type);
+                double w=type.blueprintWidth*16,length=boatLength(type);
                 // Stepped V-bow with narrow foredeck slices.
                 for(int layer=0;layer<5;layer++) {
                     double half=w/2-5+layer,yy=layer*1.3;
@@ -192,7 +195,7 @@ public final class VehicleGeometry {
                 String prop=b.group("propeller","metal",0,1,-length/2-3,'z'); b.addTo(prop,-4,-.4,-.4,8,.8,.8); b.addTo(prop,-.4,-4,-.4,.8,8,.8);
             }
             case DRONE -> {
-                double r=type.width*6;
+                double r=type.blueprintWidth*6;
                 b.add("paint",-4,5,-5,8,3,10); b.add("dark",-3,4,-4,6,1,8);
                 b.add("metal",-3,8,-3,6,6,6);
                 for(int side:new int[]{-1,1}) b.add("metal",side*4-.6,11.5,5,1.2,.6,7);

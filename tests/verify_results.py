@@ -9,6 +9,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 EXPECTED = {
+    'VehicleReleasePolishTest': {'scaleAppliedExactlyOnce', 'hydraulicEndpointsStayAttached', 'wipersReturnToPark', 'signalsUseActualDirection', 'audioEnvelopeSettlesAndIsFinite', 'everyFamilyHasMechanicalRoots'},
     'VehicleStateTest': {
         'fullCargoRoundtripRetainsComponentsAndEverySlot',
         'emptySlotsAndBrokenConditionSurvive',
@@ -82,6 +83,7 @@ EXPECTED = {
     },
 }
 OUTPUTS = {
+    'VehicleReleasePolishTest': 'vehicle-release-polish-tests.json',
     'VehicleStateTest': 'vehicle-state-tests.json',
     'VehiclePhysicsTest': 'vehicle-physics-tests.json',
     'PassengerPoseTest': 'passenger-pose-tests.json',

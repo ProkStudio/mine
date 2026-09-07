@@ -10,7 +10,7 @@ trap 'rm -rf "$work"' EXIT
 src=src/main/java/com/harvester/vehicle
 java -m jdk.compiler/com.sun.tools.javac.Main --release 21 -d "$work/classes" \
   "$src/VehicleType.java" "$src/VehicleGeometry.java" "$src/VehicleDetailing.java" \
-  "$src/VehicleAtlas.java" "$src/VehiclePhysics.java" "$src/PassengerPose.java" \
+  "$src/VehicleAssembly.java" "$src/VehicleAtlas.java" "$src/VehiclePhysics.java" "$src/PassengerPose.java" \
   "$src/PassengerAnimation.java" "$src/VehiclePresentation.java" \
   tools/src/VehicleAssetGenerator.java tools/src/VehicleVisualSmoke.java
 java -Djava.awt.headless=true -cp "$work/classes" VehicleVisualSmoke "$work/resources"

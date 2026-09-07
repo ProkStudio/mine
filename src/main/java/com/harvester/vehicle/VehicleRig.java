@@ -32,6 +32,7 @@ public final class VehicleRig {
         x-=px; y-=py; z-=pz;
         double cp=Math.cos(pose.pitch()),sp=Math.sin(pose.pitch()),cr=Math.cos(pose.roll()),sr=Math.sin(pose.roll());
         double yy=y*cp-z*sp,zz=y*sp+z*cp;
-        return new Point(px+x*cr-yy*sr,py+x*sr+yy*cr,pz+zz);
+        double scale=VehicleType.MODEL_SCALE;
+        return new Point((px+x*cr-yy*sr)*scale,(py+x*sr+yy*cr)*scale,(pz+zz)*scale);
     }
 }

@@ -81,7 +81,7 @@ public final class VehicleDetailing {
     /** Open-cockpit biplane; variants retain their existing registry/seat IDs. */
     public static List<Part> biplane(VehicleType type) {
         Mesh m=new Mesh(); boolean cargo=type==VehicleType.PLANE_CARGO;
-        double span=type.width*16,tail=cargo?-28:-24,nose=22;
+        double span=type.blueprintWidth*16,tail=cargo?-28:-24,nose=22;
         String hull=m.part("fuselage","paint",0,0,0,' ');
         // Stepped taper and chamfered belly, with a deliberately empty cockpit.
         m.box(hull,-4.5,8,-10,9,3,3);m.box(hull,-4.5,8,-7,9,1,16);m.box(hull,-4.5,8,9,9,3,11);
@@ -202,7 +202,7 @@ public final class VehicleDetailing {
     }
     /** Enclosed utility helicopter, with head clearance and a faceted, sloping canopy. */
     public static List<Part> helicopter(VehicleType type) {
-        Mesh m=new Mesh();boolean cargo=type==VehicleType.HELICOPTER_CARGO;double radius=type.width*10;
+        Mesh m=new Mesh();boolean cargo=type==VehicleType.HELICOPTER_CARGO;double radius=type.blueprintWidth*10;
         m.add("paint",-8,7,-13,16,3,29);m.add("dark",-6,5.5,-11,12,1.5,25);
         m.add("paint",-8,10,-13,16,18,7);
         m.add("paint",-7,28,-12,14,4,6);m.add("paint",-6,32,-11,12,1.5,6);
@@ -305,11 +305,11 @@ public final class VehicleDetailing {
                 }
                 String cap=m.part("exhaust_cap","dark",12.5,39,-12.5,'k'); m.box(cap,-1,0,-.3,2,.4,2.4);
                 String pulley=m.part("cooling_fan","metal",15.4,16,-7,'x'); m.box(pulley,-.2,-2,-.35,.4,4,.7); m.box(pulley,-.2,-.35,-2,.4,.7,4);
-                double w=type.width*16;
+                double w=type.blueprintWidth*16;
                 for(int i=0;i<8;i++) m.add("brass",-w/2+3+i*(w-6)/7,8.2,22,.55,.55,.3);
             }
             case DOZER -> {
-                double w=type.width*16;
+                double w=type.blueprintWidth*16;
                 String edge=m.part("blade_cutting_edge","metal",0,7,24,'b'); m.box(edge,-w/2,-4.6,-.6,w,.65,3.2);
                 for(int i=0;i<9;i++) m.box(edge,-w/2+2+i*(w-4)/8,-3.6,2,.65,.65,.3);
                 for(int side:new int[]{-1,1}) {
@@ -368,7 +368,7 @@ public final class VehicleDetailing {
                 }
             }
             case BOAT -> {
-                double w=type.width*16,back=-boatLength(type)/2;
+                double w=type.blueprintWidth*16,back=-boatLength(type)/2;
                 m.add("metal",-1.5,6.6,-3,3,2.4,3);
                 m.rod("steering_column","metal",0,12.5,8.2,7.8,.6,'x',-22.5);
                 for(int side:new int[]{-1,1}) {
@@ -383,7 +383,7 @@ public final class VehicleDetailing {
                 for(int step=0;step<3;step++) m.add("metal",w/2-6,4-step*2,back-1.2,4,.5,.6);
             }
             case DRONE -> {
-                double r=type.width*6;
+                double r=type.blueprintWidth*6;
                 for(int side:new int[]{-1,1}) {
                     m.add("paint",side*3-1.3,17,5,2.6,1.4,4);
                     m.rod("control_support_"+side,"metal",side*3,16.5,4.75,5.2,.6,'x',45);
