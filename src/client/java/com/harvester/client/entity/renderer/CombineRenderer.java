@@ -116,7 +116,7 @@ public class CombineRenderer extends EntityRenderer<CombineEntity,CombineRenderS
                 matrices.translate(0,-5.5/16,-12/16.0);
             }
             if(outboard) {
-                double length=state.variant==VehicleType.BOAT_CARGO?40:34;
+                double length=VehicleGeometry.boatLength(state.variant);
                 matrices.translate(0,5/16.0,(-length/2-1)/16);
                 matrices.multiply(RotationAxis.POSITIVE_Y.rotation(-state.steering));
                 matrices.translate(0,-5/16.0,(length/2+1)/16);

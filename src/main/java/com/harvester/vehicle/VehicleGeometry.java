@@ -23,12 +23,14 @@ public final class VehicleGeometry {
             case DOZER -> new Seat(0,20,-5.5);
             case PICKUP -> new Seat(0,12,-.5);
             case MOTORCYCLE -> index<=0?new Seat(0,15,.5):new Seat(0,16,-11.5);
-            case BOAT -> new Seat(0,9,-1.5);
+            case BOAT -> new Seat(0,11,-1.5);
             case PLANE -> new Seat(0,13,-5);
             case HELICOPTER -> new Seat(0,13,3.5);
-            case DRONE -> new Seat(0,14,0);
+            case DRONE -> new Seat(0,16,0);
         };
     }
+    /** Shared by the hull blueprint and the articulated outboard parent pivot. */
+    public static double boatLength(VehicleType type) { return type==VehicleType.BOAT_CARGO?50:42; }
     public static TrackPoint trackPoint(double distance) {
         double t=((distance%TRACK_PERIMETER)+TRACK_PERIMETER)%TRACK_PERIMETER;
         if(t<28) return new TrackPoint(13,-14+t,0);
@@ -175,29 +177,29 @@ public final class VehicleGeometry {
                 if(cargo) for(int side:new int[]{-1,1}) { b.add("seat",side*5-2,8,-13,4,6,7); b.add("metal",side*5-2,14,-13,4,.5,7); }
             }
             case BOAT -> {
-                double w=type.width*16,length=cargo?40:34;
-                // A real stepped V-bow, not five full-width rectangular slabs.
+                double w=type.width*16,length=boatLength(type);
+                // Stepped V-bow with narrow foredeck slices.
                 for(int layer=0;layer<5;layer++) {
                     double half=w/2-5+layer,yy=layer*1.3;
                     b.add("paint",-half,yy,-length/2+3-layer,half*2,1.3,length-12+layer);
-                    for(int step=0;step<4;step++) { double taper=half*(1-step*.20); b.add("paint",-taper,yy,length/2-9+step*2.1,taper*2,1.3,2.1); }
+                    for(int step=0;step<8;step++) { double taper=half*(1-step*.125); b.add("paint",-taper,yy,length/2-9+step*1.05,taper*2,1.3,1.05); }
                 }
                 b.add("dark",-w/2+2,6,-length/2+2,w-4,.6,length-11);
                 for(int side:new int[]{-1,1}) { b.add("paint",side*(w/2-1)-1,6,-length/2,2,5,length-9); b.add("metal",side*(w/2-2)-.3,11,-length/2,.6,.6,length-9); for(int i=0;i<3;i++) b.add("metal",side*(w/2-3)-.3,8,i*7-8,.6,4,.6); }
-                for(int step=0;step<3;step++) { double half=(w/2-1)*(1-step*.23); b.add("paint",-half,6,length/2-9+step*2,half*2,2,2); }
-                b.add("paint",-w/2+3,8,2,w-6,3,3); b.add("glass",-w/2+3,11,3,w-6,4,.5);
+                for(int step=0;step<8;step++) { double half=(w/2-1)*(1-step*.125); b.add("paint",-half,6.5,length/2-9+step*1.05,half*2,1.5,1.05); }
+                b.add("paint",-w/2+3,8,10,w-6,4,3); b.add("glass",-w/2+3,12,11,w-6,6,.5);
                 String motor=b.group("outboard","dark",0,5,-length/2-1,'u'); b.addTo(motor,-3,0,-2,6,8,4); b.addTo(motor,-1,-5,-1,2,6,2);
                 String prop=b.group("propeller","metal",0,1,-length/2-3,'z'); b.addTo(prop,-4,-.4,-.4,8,.8,.8); b.addTo(prop,-.4,-4,-.4,.8,8,.8);
             }
             case DRONE -> {
                 double r=type.width*6;
-                b.add("paint",-4,5,-5,8,3,10); b.add("dark",-3,4,-4,6,1,8); b.add("glass",-1.7,3,5,3.4,2,1.5);
-                b.add("metal",-3,8,-3,6,4,6);
+                b.add("paint",-4,5,-5,8,3,10); b.add("dark",-3,4,-4,6,1,8);
+                b.add("metal",-3,8,-3,6,6,6);
                 for(int side:new int[]{-1,1}) b.add("metal",side*4-.6,11.5,5,1.2,.6,7);
                 for(int a:new int[]{-1,1}) for(int c:new int[]{-1,1}) {
                     b.add("metal",Math.min(0,a*r),6,c*r-.5,r,1,1); b.add("metal",a*r-.5,6,Math.min(0,c*r),1,1,r);
                     b.add("dark",a*r-1.5,6,c*r-1.5,3,2,3); String rotor=b.group("rotor_"+a+"_"+c,"dark",a*r,9,c*r,'y');
-                    b.addTo(rotor,-5,-.25,-.6,10,.5,1.2); b.add("metal",a*r-.4,1,c*r-.4,.8,5,.8);
+                    b.addTo(rotor,-3.6,-.25,-.6,7.2,.5,1.2); b.add("metal",a*r-.4,1,c*r-.4,.8,5,.8);
                 }
                 if(cargo) b.add("seat",-4,1,-4,8,3,8);
             }

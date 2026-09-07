@@ -65,7 +65,10 @@ public final class VehicleVisualSmoke {
         check(PassengerPose.keepVanillaArms(true,0) && PassengerPose.keepVanillaArms(false,.5f),"Item/attack priority");
         check(a.update(rider(2,VehicleType.PLANE,0,2,0,0,0)).weight()==0,"Seat entry reset");
         var present=new VehiclePresentation();VehiclePresentation.Frame frame=null;
-        for(int i=0;i<200;i++) frame=present.update(new VehiclePresentation.Input(i,VehicleType.PICKUP,i<40,false,i<50,true,i<40?.2:0,i<40?1:0,0,0,0,1,1));
+        for(int i=0;i<200;i++) {
+            frame=present.update(new VehiclePresentation.Input(i,VehicleType.PICKUP,i<40,false,i<50,true,
+                i<40?.2:0,i<40?1:0,0,0,0,0,1,1));
+        }
         check(frame!=null && frame.rpm()<1e-5,"Engine settles after shutdown");
         System.out.println("Visual smoke PASS: "+VehicleType.values().length+" variants, "+checks+" assertions. No client/shader validation implied.");
     }

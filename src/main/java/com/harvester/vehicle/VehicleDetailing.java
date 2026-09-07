@@ -59,8 +59,9 @@ public final class VehicleDetailing {
     }
     private static void instruments(Mesh m,VehicleType type) {
         Seat s=seat(type,0); boolean bike=type.family==VehicleType.Family.MOTORCYCLE;
-        double y=s.top()+(bike?4.6:5.5),z=s.z()+(bike?9:type.family==VehicleType.Family.PICKUP?9:11);
-        double scale=bike?.62:1;
+        double forward=switch(type.family) { case PICKUP,PLANE,MOTORCYCLE,DRONE -> 9;case COMBINE -> 9.5;case DOZER -> 10.5;default -> 11; };
+        double y=s.top()+(bike?4.6:5.5),z=s.z()+forward;
+        double scale=bike?.62:type.family==VehicleType.Family.DRONE?.7:1;
         m.add("dark",-4*scale,y-2*scale,z-.1,8*scale,3.4*scale,bike?.65:1.3);
         String[] channels={"fuel","rpm","speed"};
         for(int i=0;i<3;i++) {
@@ -102,13 +103,11 @@ public final class VehicleDetailing {
             double w=4.8-i*.9,z=-10-(i+1)*tailLength/4;
             m.box(hull,-w,10+i*.7,z,w*2,6-i*.75,tailLength/4);
         }
-        // Band wraps around the tail, not an oversized floating decal plane.
         double bandZ=tail+5;
         m.add("trim",-3.05,11.32,bandZ,6.1,4.64,1.8);
         m.add("metal",-1,9.6,tail+1,2,1.2,6);
         m.rod("tail_skid","dark",0,7.5,tail+2,6,.7,'x',22.5);
         m.wheel("tail",0,3.5,tail+3,1.9,1.4);
-        // Two actual airfoils with stepped tips, chordwise panels and high-contrast tip bands.
         for(int level=0;level<2;level++) {
             double y=level==0?12.8:30.5,half=span/2-(level==0?1.2:0),z=level==0?5:4;
             for(int side:new int[]{-1,1}) {
@@ -133,7 +132,7 @@ public final class VehicleDetailing {
             }
             if(level==1) {
                 String bridge=m.part("wing_upper_center","paint",0,0,0,' ');
-                m.box(bridge,-5.3,y,8,10.6,1.3,7.7); // trailing-edge cockpit sight notch
+                m.box(bridge,-5.3,y,8,10.6,1.3,7.7);
                 m.add("trim",-1.2,y+1.32,9.5,2.4,.15,4.5);
             }
         }
@@ -144,7 +143,6 @@ public final class VehicleDetailing {
             m.add("metal",x-1.1,13.8,11.2,2.2,.65,2);
             m.add("metal",x-1.1,29.5,11.2,2.2,.65,2);
             m.rod("cabane_"+side,"dark",side*6.6,25.5,12,10.6,.9,'z',-side*22.5);
-            // Main landing gear is separated into fixed fairings and rotating tires/hubs.
             m.rod("gear_leg_"+side,"metal",side*6.6,7.6,11,10.5,1.1,'z',side*22.5);
             m.rod("gear_brace_"+side,"dark",side*7,8.4,6.7,9,.6,'x',-45);
             m.add("dark",side*8.3-1.7,6.8,7,3.4,.65,8);
@@ -159,7 +157,6 @@ public final class VehicleDetailing {
             m.add("brass",side*5.65-.3,17.5,18,.6,.7,.8);
         }
         m.add("metal",-9.2,3.8,9.75,18.4,.7,.9);
-        // Square cowling, recessed radiator and original two-bladed wooden propeller.
         m.add("dark",-4.9,10.1,nose-2,9.8,9,2.1);
         m.add("trim",-5.5,9.7,nose,11,1.2,1.2);
         m.add("trim",-5.5,19.3,nose,11,1.2,1.2);
@@ -173,7 +170,6 @@ public final class VehicleDetailing {
         m.box(tips,-1.24,-11.02,-.39,2.48,1.54,.78); m.box(tips,-1.24,9.48,-.39,2.48,1.54,.78);
         m.add("metal",-1.25,13.85,nose+2.3,2.5,2.5,1.5);
         m.add("brass",-.5,14.6,nose+3.81,1,1,.24);
-        // Stabilizers, elevator, rudder and hinges retain independent real pivots.
         m.add("paint",-11.2,14.5,tail+1.5,22.4,1.1,4.8);
         for(int side:new int[]{-1,1}) m.add("trim",side<0?-10.6:8.8,14.45,tail+1.5,1.8,1.2,4.8);
         String elevator=m.part("elevator","paint",0,15.05,tail+1.5,'e');
@@ -183,7 +179,6 @@ public final class VehicleDetailing {
         m.box(rudder,-.65,-4.5,-2,1.3,9,1.95);
         String rudderTrim=m.part("rudder_trim","trim",0,20.1,tail+2,'v');
         m.box(rudderTrim,-.69,-4.5,-2.08,1.38,9,.45);
-        // Leather cushion is exactly the existing attachment source; no mesh crosses the head.
         Seat seat=seat(type,0);
         String cushion=m.part("seat_0","seat",seat.x(),seat.top(),seat.z(),' ');
         m.box(cushion,-3,-2,-3,6,2,6); m.box(cushion,-3,0,-3,6,6,1);
@@ -221,10 +216,10 @@ public final class VehicleDetailing {
             m.add("glass",side*8.8-.12,18.7,-3.8,.24,13,14.5);
             m.add("metal",side*9.17-.14,16,-2,.28,.6,2.6);
             m.add("metal",side*9.25-.18,17.8,-5,.36,.35,16);
-            for(int z:new int[]{-4,8}) m.rod("skid_leg_"+side+"_"+z,"metal",side*8.8,6,z,7,1.1,'z',side*22.5);
-            m.add("metal",side*10-.65,2.5,-16,1.3,1.1,35);
-            m.rod("skid_curve_"+side,"metal",side*10,4.1,20,4.7,1.1,'x',45);
-            m.add("rubber",side*10-.75,2.3,-8,1.5,.5,10);
+            for(int z:new int[]{-4,8}) m.rod("skid_leg_"+side+"_"+z,"metal",side*8.8,5,z,8.5,1.1,'z',side*22.5);
+            m.add("metal",side*10-.65,.3,-16,1.3,1.1,35);
+            m.rod("skid_curve_"+side,"metal",side*10,2.1,20,4.7,1.1,'x',45);
+            m.add("rubber",side*10-.75,.1,-8,1.5,.5,10);
             m.add("metal",side<0?-10.5:8,9.7,3,2.5,.6,8);
             m.add("dark",side*4.2-1.5,29,-12,3,3.4,5.2);
             for(int fin=0;fin<5;fin++) m.add("metal",side*4.2-1.4,29.3+fin*.55,-12.15,2.8,.22,.35);
@@ -232,7 +227,6 @@ public final class VehicleDetailing {
             m.add("dark",side*4.2-.75,30,-13.12,1.5,1.5,.2);
             m.add(side<0?"red":"lamp",side*8.8-.45,32,7,.9,.75,1.2);
         }
-        // Empty legwell, rounded nose and windshield tilted back toward the roof.
         m.add("paint",-8,10,15,16,3.8,4);m.add("paint",-6.8,10.3,19,13.6,3,2.2);
         m.add("paint",-5.5,10.8,21.2,11,2,1.2);
         String glass=m.part("canopy_front","glass",0,23.4,16.2,' ',-22.5,0,0);
@@ -242,7 +236,6 @@ public final class VehicleDetailing {
         m.box(frame,-.35,-9.8,-.43,.7,19.6,.86);
         m.box(frame,-8.4,-9.8,-.45,16.8,.65,.9);m.box(frame,-8.4,9.15,-.45,16.8,.65,.9);
         m.add("lamp",-1.9,11.25,22.41,3.8,1,.35);
-        // Tapered boom, stabilizers and isolated tail-rotor axle.
         for(int i=0;i<4;i++) { double half=2.6-i*.45;m.add("paint",-half,18+i*.55,-19-i*5.5,half*2,4-i*.5,6); }
         for(int i=0;i<3;i++) m.add("paint",-.7,22+i*2.8,-35.5+i*.7,1.4,2.8,5.2-i*1.2);
         m.add("trim",-.76,29,-34.2,1.52,.85,2.8);
@@ -252,7 +245,6 @@ public final class VehicleDetailing {
         m.box(tail,-.4,-4.8,-.48,.8,9.6,.96);m.box(tail,-.4,-.48,-4.8,.8,.96,9.6);
         m.add("brass",4.02,24.3,-33.7,.5,1.4,1.4);
         m.add("red",-.6,30.4,-32.7,1.2,.8,1.2);
-        // Mast sits directly above the roof, with swashplate and four proper blade roots.
         m.add("metal",-.8,34.9,-4.8,1.6,5,1.6);
         String plate=m.part("swashplate","metal",0,37,-4,'j');m.box(plate,-2,-.4,-2,4,.8,4);
         for(int side:new int[]{-1,1}) m.add("brass",side*1.5-.2,35.2,-4.2,.4,3.8,.4);
@@ -376,7 +368,9 @@ public final class VehicleDetailing {
                 }
             }
             case BOAT -> {
-                double w=type.width*16,back=type==VehicleType.BOAT_CARGO?-20:-17;
+                double w=type.width*16,back=-boatLength(type)/2;
+                m.add("metal",-1.5,6.6,-3,3,2.4,3);
+                m.rod("steering_column","metal",0,12.5,8.2,7.8,.6,'x',-22.5);
                 for(int side:new int[]{-1,1}) {
                     m.add("trim",side*(w/2-1)-.4,5.1,back+2,.8,.9,-back+7);
                     m.add("rubber",side*(w/2+.05)-.45,7.2,-6,.9,2.4,3.5);
@@ -390,13 +384,18 @@ public final class VehicleDetailing {
             }
             case DRONE -> {
                 double r=type.width*6;
+                for(int side:new int[]{-1,1}) {
+                    m.add("paint",side*3-1.3,17,5,2.6,1.4,4);
+                    m.rod("control_support_"+side,"metal",side*3,16.5,4.75,5.2,.6,'x',45);
+                    m.add("metal",side*2.5-.2,18.4,8.9,.4,1.7,.4);
+                }
                 for(int x:new int[]{-1,1}) for(int z:new int[]{-1,1}) {
                     m.add("metal",x*r-1.2,7.5,z*r-1.2,2.4,.45,2.4);
                     m.add(x<0?"red":"lamp",x*r-.55,5.1,z*r-.55,1.1,.7,1.1);
                     String tip=m.part("tip_rotor_"+x+"_"+z,"trim",x*r,9,z*r,'y'); m.box(tip,-5,-.28,-.62,1.4,.56,1.24); m.box(tip,3.6,-.28,-.62,1.4,.56,1.24);
                     m.add("rubber",x*r-.8,.6,z*r-.8,1.6,.5,1.6);
                 }
-                m.add("metal",-2.3,2.6,4.7,4.6,.5,2.2);
+                m.add("metal",-2.3,3.8,4.7,4.6,.5,2.2);
                 String camera=m.part("camera_gimbal","dark",0,2.6,5.5,'g'); m.box(camera,-1.5,-1.1,-.6,3,2.2,1.6);
                 String lens=m.part("camera_lens","glass",0,2.6,5.5,'g'); m.box(lens,-.75,-.75,1.05,1.5,1.5,.3);
                 for(int i=0;i<4;i++) m.add("dark",-2.8+i*1.6,7.8,-4,.6,.4,2.4);
