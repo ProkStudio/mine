@@ -24,7 +24,8 @@ public final class PassengerPose {
             case MOTORCYCLE -> new Limbs(-1.05f,.18f,-1.25f,.40f);
             case COMBINE,DOZER -> new Limbs(-.95f,.22f,-1.40f,.20f);
             case PICKUP,BOAT -> new Limbs(-1.10f,.24f,-1.40f,.20f);
-            case PLANE -> new Limbs(-1.05f,.20f,-1.40f,.18f);
+            // Boots stay in the narrow biplane footwell, not inside the lower wings.
+            case PLANE -> new Limbs(-1.05f,.20f,-1.40f,.02f);
             case HELICOPTER -> new Limbs(-.90f,.12f,-1.40f,.20f);
             case DRONE -> new Limbs(-.90f,.16f,-1.30f,.28f);
         };
