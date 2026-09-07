@@ -65,10 +65,14 @@ public final class VehicleAssembly {
     public static List<Part> complete(VehicleType type,List<Part> original) {
         VehicleAssembly a=new VehicleAssembly();List<Cuboid> headerBolts=new ArrayList<>();
         for(Part p:original) {
-            // Blade pushrods must not share the chassis top plane: avoid visible z-fighting.
-            if(type.family==VehicleType.Family.DOZER && p.name().equals("metal")) {
+            // Keep visible moving/fixed surfaces on distinct depth planes.
+            if(type.family==VehicleType.Family.DOZER && (p.name().equals("metal") || p.name().equals("rubber"))) {
                 List<Cuboid> separated=new ArrayList<>();
-                for(Cuboid b:p.boxes()) separated.add(b.y()==8 && b.z()==10 && b.w()==2 && b.h()==2 && b.d()==15 ? box(b.x(),b.y(),b.z(),b.w(),2.12,b.d()) : b);
+                for(Cuboid b:p.boxes()) {
+                    if(p.material().equals("metal") && b.y()==8 && b.z()==10 && b.w()==2 && b.h()==2 && b.d()==15) separated.add(box(b.x(),b.y(),b.z(),b.w(),2.12,b.d()));
+                    else if(p.material().equals("rubber") && b.w()==6 && b.h()==3 && b.d()==36) separated.add(box(b.x()+.12,b.y(),b.z(),5.76,b.h(),b.d()));
+                    else separated.add(b);
+                }
                 p=new Part(p.name(),p.material(),p.px(),p.py(),p.pz(),p.axis(),List.copyOf(separated),p.restPitch(),p.restYaw(),p.restRoll());
             }
             if(p.name().startsWith("header_ram_") || p.name().startsWith("blade_ram_") || p.name().equals("steering_column")) continue;
