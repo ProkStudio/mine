@@ -1,6 +1,7 @@
 """Require actual execution of state, physics, passenger, animation and resource tests.
 
 Run after a clean Gradle build; this verifier never substitutes for executing tests.
+Expected method names are deliberately fixed, not discovered from possibly deleted sources.
 """
 import json
 import os
@@ -49,6 +50,36 @@ EXPECTED = {
         'passengerMixinsAreClientOnlyAndRequired',
         'pistonPlaceholderIsNotRestored',
     },
+    'VehicleGeometryTest': {
+        'everyVariantHasOwnDetailedFiniteGeometry',
+        'noVanillaGeometryOrTextureIdentifiers',
+    },
+    'VehicleAtlasTest': {
+        'islandsAreDeterministicUniqueAndInsideBudget',
+        'cuboidIslandsNeverOverlapIncludingTheirGutters',
+        'allSixFaceUvsStayInTheirOwnIsland',
+        'packagedAtlasesMatchTheRuntimeLayoutAndContainCutoutGlass',
+        'duplicatePartNamesCannotSilentlyAliasUvs',
+    },
+    'VehiclePresentationTest': {
+        'filtersAreFrameRateIndependent',
+        'phasesComeFromActualDrivingWorkingAndFlightSignals',
+        'standRetractsForOccupiedMovingOrAirborneBikes',
+        'gaugesReflectFuelAndSpeedRatherThanDecorativeOscillation',
+        'historiesAreIndependentAndResetAfterTypeChangeOrTimeJump',
+        'invalidTelemetryNeverProducesNonFiniteOrUnboundedTransforms',
+        'shutdownSettlesAndNoDecorativeMotorRunsWithoutPower',
+    },
+    'PassengerAnimationTest': {
+        'allFamiliesAndSeatsProduceIndependentFiniteJoints',
+        'driversRespondToSteeringAndPedalsInsteadOfOneFrozenPose',
+        'pillionUsesRearSupportAndNeverSteersTheHandlebars',
+        'entryBlendResetsOnSeatVehicleTypeOrTimeDiscontinuity',
+        'controlAndEntrySmoothingAreFrameSubdivisionIndependent',
+        'neutralHandTargetsMatchTheModelControlPivots',
+        'invalidInputIsBoundedAndLargeSeatIdentityIsNotTruncated',
+        'vanillaItemUseAndAttackHavePriorityOverTheControlLayer',
+    },
 }
 OUTPUTS = {
     'VehicleStateTest': 'vehicle-state-tests.json',
@@ -56,6 +87,10 @@ OUTPUTS = {
     'PassengerPoseTest': 'passenger-pose-tests.json',
     'VehicleAnimationTest': 'vehicle-animation-tests.json',
     'VehicleVisualResourcesTest': 'vehicle-visual-resources-tests.json',
+    'VehicleGeometryTest': 'vehicle-geometry-tests.json',
+    'VehicleAtlasTest': 'vehicle-atlas-tests.json',
+    'VehiclePresentationTest': 'vehicle-presentation-tests.json',
+    'PassengerAnimationTest': 'passenger-animation-tests.json',
 }
 root = Path(__file__).resolve().parent.parent
 output_dir = root / 'build/verification'
