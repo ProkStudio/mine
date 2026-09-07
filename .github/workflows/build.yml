@@ -9,16 +9,18 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
-    env:
-      GRADLE_USER_HOME: ${{ runner.temp }}/gradle-home
-      JAVA_TOOL_OPTIONS: -Djava.io.tmpdir=${{ runner.temp }}/java-tmp
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           persist-credentials: false
       - name: Prepare isolated ASCII paths
-        run: mkdir -p "$GRADLE_USER_HOME" "${{ runner.temp }}/java-tmp"
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/gradle-home" "$RUNNER_TEMP/java-tmp"
+          printf 'GRADLE_USER_HOME=%s/gradle-home\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'JAVA_TOOL_OPTIONS=-Djava.io.tmpdir=%s/java-tmp\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
       - name: Set up JDK 21
