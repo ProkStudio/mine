@@ -1,0 +1,51 @@
+name: Vehicle art smoke and offline previews
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vehicle-art-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install offline-renderer dependencies
+        run: python -m pip install --disable-pip-version-check numpy==2.3.3 Pillow==11.3.0
+      - name: Validate real source geometry, resources and pose math
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          printf '%s\n' "$GITHUB_SHA" > build/visual-smoke-sha.txt
+          bash tests/run-visual-smoke.sh --previews 2>&1 | tee build/visual-smoke.log
+          printf '%s\n' 'Offline source-mesh previews. Not Minecraft screenshots; no client, shader or performance validation.' > build/previews/README.txt
+      - name: Attach previews and the actual smoke log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vehicle-art-${{ github.sha }}
+          path: |
+            build/visual-smoke.log
+            build/visual-smoke-sha.txt
+            build/previews/
+            build/preview-meshes/
+          if-no-files-found: warn
+          retention-days: 14
