@@ -9,7 +9,7 @@ import java.util.*;
 
 /** At most 16 loops including fading ones; no retained entities after world exit. */
 public final class VehicleAudio {
-    private record Loop(VehicleEngineSound sound,long started) {}
+    private record Loop(VehicleEngineSound sound,long started,com.harvester.vehicle.VehicleType type) {}
     private static final Map<CombineEntity,Loop> SOUNDS=new HashMap<>();
     private static ClientWorld world;
     private static long clock;
@@ -40,7 +40,7 @@ public final class VehicleAudio {
         List<CombineEntity> nearby=new ArrayList<>();
         for(var entity:world.getEntities()) if(entity instanceof CombineEntity vehicle && !vehicle.isRemoved()
                 && vehicle.isEngineActive() && vehicle.getFuel()>0 && vehicle.getCondition()>0 && client.player.squaredDistanceTo(vehicle)<=32*32) nearby.add(vehicle);
-        nearby.sort(Comparator.comparingDouble(v->client.player.squaredDistanceTo(v)));
+        nearby.sort(Comparator.comparingDouble((CombineEntity v)->client.player.getVehicle()==v?-1:client.player.squaredDistanceTo(v)-(SOUNDS.containsKey(v)?4:0)));
         List<CombineEntity> priority=nearby.subList(0,Math.min(16,nearby.size())); Set<CombineEntity> selected=new HashSet<>(priority);
         var iterator=SOUNDS.entrySet().iterator();
         while(iterator.hasNext()) {
@@ -48,11 +48,11 @@ public final class VehicleAudio {
             sound.request(selected.contains(vehicle));
             boolean lost=vehicle.isRemoved() || !world.hasEntity(vehicle);
             boolean unavailable=clock-loop.started()>20 && !manager.isPlaying(sound);
-            if(lost || sound.finished() || unavailable) { sound.stopNow(); manager.stop(sound); iterator.remove(); }
+            if(lost || sound.finished() || unavailable || loop.type()!=vehicle.variant()) { sound.stopNow(); manager.stop(sound); iterator.remove(); }
         }
         for(var vehicle:priority) {
             if(SOUNDS.size()>=16) break;
-            if(!SOUNDS.containsKey(vehicle)) { var sound=new VehicleEngineSound(vehicle,gain); SOUNDS.put(vehicle,new Loop(sound,clock)); manager.play(sound); }
+            if(!SOUNDS.containsKey(vehicle)) { var sound=new VehicleEngineSound(vehicle,gain); SOUNDS.put(vehicle,new Loop(sound,clock,vehicle.variant())); manager.play(sound); }
         }
     }
 }

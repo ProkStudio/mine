@@ -5,24 +5,32 @@ import java.util.*;
 /** Original geometry: model pixels, +Y up, +Z forward. Seats are the single attachment source. */
 public final class VehicleGeometry {
     public record Cuboid(float x,float y,float z,float w,float h,float d) {}
-    public record Part(String name,String material,float px,float py,float pz,char axis,List<Cuboid> boxes) {}
+    /** Rest angles are degrees around the part pivot; animated rotation is applied after rest. */
+    public record Part(String name,String material,float px,float py,float pz,char axis,List<Cuboid> boxes,
+                       float restPitch,float restYaw,float restRoll) {
+        public Part(String name,String material,float px,float py,float pz,char axis,List<Cuboid> boxes) {
+            this(name,material,px,py,pz,axis,boxes,0,0,0);
+        }
+    }
     public record Seat(double x,double top,double z) {}
     public record TrackPoint(double y,double z,double angle) {}
     public static final double TRACK_PERIMETER=56+12*Math.PI;
-    public static final List<String> MATERIALS=List.of("paint","metal","rubber","glass","seat","accent","dark");
+    public static final List<String> MATERIALS=List.of("paint","metal","rubber","glass","seat","accent","dark","trim","red","lamp","wood","gauge","brass");
     private VehicleGeometry() {}
     public static Seat seat(VehicleType type,int index) {
         return switch(type.family) {
             case COMBINE -> new Seat(0,26,6.5);
             case DOZER -> new Seat(0,20,-5.5);
-            case PICKUP -> new Seat(0,15,-.5);
+            case PICKUP -> new Seat(0,12,-.5);
             case MOTORCYCLE -> index<=0?new Seat(0,15,.5):new Seat(0,16,-11.5);
-            case BOAT -> new Seat(0,9,-1.5);
+            case BOAT -> new Seat(0,11,-1.5);
             case PLANE -> new Seat(0,13,-5);
             case HELICOPTER -> new Seat(0,13,3.5);
-            case DRONE -> new Seat(0,14,0);
+            case DRONE -> new Seat(0,16,0);
         };
     }
+    /** Shared by the hull blueprint and the articulated outboard parent pivot. */
+    public static double boatLength(VehicleType type) { return type==VehicleType.BOAT_CARGO?50:42; }
     public static TrackPoint trackPoint(double distance) {
         double t=((distance%TRACK_PERIMETER)+TRACK_PERIMETER)%TRACK_PERIMETER;
         if(t<28) return new TrackPoint(13,-14+t,0);
@@ -36,25 +44,31 @@ public final class VehicleGeometry {
     public static int paintColor(VehicleType type) {
         return switch(type.family) {
             case COMBINE -> 0x8ea849; case DOZER -> 0xd8aa39; case PICKUP -> 0x437a98;
-            case MOTORCYCLE -> 0xa9473f; case BOAT -> 0xe0dfcf; case PLANE -> 0xd5d4c9;
+            case MOTORCYCLE -> 0xa9473f; case BOAT -> 0xe0dfcf; case PLANE -> 0xe36835;
             case HELICOPTER -> 0x6b8071; case DRONE -> 0xc1c8cd;
         };
     }
     public static int materialColor(String material,VehicleType type) {
         return switch(material) {
-            case "paint" -> paintColor(type); case "metal" -> 0x909da3; case "rubber" -> 0x24282b;
-            case "glass" -> 0x608fa5; case "seat" -> 0x464e51; case "accent" -> 0xd7a242; default -> 0x363f44;
+            case "paint" -> paintColor(type); case "metal" -> 0x879aa7; case "rubber" -> 0x272d35;
+            case "glass" -> 0x8ac5da; case "seat" -> 0x695244; case "accent" -> 0xd7a242;
+            case "trim" -> 0xe8e4d5; case "red" -> 0xaf393b; case "lamp" -> 0xf2deb0;
+            case "wood" -> 0xb88a50; case "gauge" -> 0x202d3a; case "brass" -> 0xc1a36b;
+            default -> 0x344959;
         };
     }
     private static final class Builder {
         final Map<String,List<Cuboid>> boxes=new LinkedHashMap<>();
         final Map<String,Part> parts=new LinkedHashMap<>();
+        final String staticPrefix;
+        Builder() { this(""); }
+        Builder(String staticPrefix) { this.staticPrefix=staticPrefix; }
         String group(String name,String material,double x,double y,double z,char axis) {
             parts.putIfAbsent(name,new Part(name,material,(float)x,(float)y,(float)z,axis,List.of()));
             boxes.computeIfAbsent(name,k->new ArrayList<>()); return name;
         }
         void add(String material,double x,double y,double z,double w,double h,double d) {
-            addTo(group(material,material,0,0,0,' '),x,y,z,w,h,d);
+            addTo(group(staticPrefix+material,material,0,0,0,' '),x,y,z,w,h,d);
         }
         void addTo(String group,double x,double y,double z,double w,double h,double d) {
             if(w<=0||h<=0||d<=0) throw new IllegalArgumentException("Nonpositive cuboid");
@@ -73,16 +87,21 @@ public final class VehicleGeometry {
             wheel(id+"l",-width/2,r,z,3.8,r); wheel(id+"r",width/2,r,z,3.8,r);
         }
         void cabin(double width,double bottom,double height,double z,double length) {
-            // Open roof: side rails never cross the player's head or first-person camera.
+            // Seat is bottom+2; a vanilla seated player needs ~19 pixels above the cushion.
+            height=Math.max(height,22);
+            add("paint",-width/2-1,bottom+height+.2,z-1,width+2,1.1,length+2);
+            add("trim",-width/2-.6,bottom+height+1.3,z-.6,width+1.2,.45,length+1.2);
             for(int side:new int[]{-1,1}) {
                 add("paint",side*(width/2-.6)-.5,bottom,z,1,height,1);
                 add("paint",side*(width/2-.6)-.5,bottom,z+length-1,1,height,1);
                 add("paint",side*(width/2-.6)-.5,bottom+height,z,1,1,length);
-                add("glass",side*(width/2-.6)-.15,bottom+1,z+1,.3,height-2,length-2);
+                add("paint",side*(width/2-.6)-.5,bottom,z+1,1,6,length-2);
+                add("glass",side*(width/2-.6)-.15,bottom+6,z+1,.3,height-7,length-2);
                 add("metal",side*(width/2+1.5)-.35,bottom+height*.6,z+length-2,.7,.7,3);
                 add("dark",side*(width/2+3)-.5,bottom+height*.6,z+length-2,1,3,2);
             }
-            add("glass",-width/2+1,bottom+1,z+length-.35,width-2,height-2,.3);
+            add("paint",-width/2+1,bottom,z+length-1,width-2,6,1);
+            add("glass",-width/2+1,bottom+6,z+length-.35,width-2,height-7,.3);
             add("glass",-width/2+1,bottom+1,z+.1,width-2,height-2,.3);
             add("dark",-width/2+1,bottom+2,z+length-3,width-2,2,2);
         }
@@ -94,11 +113,16 @@ public final class VehicleGeometry {
         }
     }
     public static List<Part> create(VehicleType type) {
+        return VehicleAssembly.complete(type,blueprint(type));
+    }
+    private static List<Part> blueprint(VehicleType type) {
+        if(type.family==VehicleType.Family.PLANE) return VehicleDetailing.biplane(type);
+        if(type.family==VehicleType.Family.HELICOPTER) return VehicleDetailing.helicopter(type);
         Builder b=new Builder();
         boolean cargo=type.slots>switch(type.family) { case COMBINE,DOZER,PICKUP -> 27; case MOTORCYCLE,DRONE -> 9; default -> 18; };
         switch(type.family) {
             case COMBINE -> {
-                double w=type.width*16;
+                double w=type.blueprintWidth*16;
                 b.add("dark",-15,8,-21,30,3,42); b.add("paint",-15,11,-20,30,13,27);
                 b.add("paint",-12,24,-18,24,5,15); b.add("dark",-10,29,-16,20,.5,11);
                 for(int side:new int[]{-1,1}) { b.add("metal",side*12-.4,28,-18,.8,5,15); b.vents(side*15.2,13,-15,6); b.add("paint",side*15-3,18,5,6,1,14); }
@@ -117,7 +141,7 @@ public final class VehicleGeometry {
                 if(cargo) b.add("paint",-12,29,-18,24,3,1);
             }
             case DOZER -> {
-                double w=type.width*16;
+                double w=type.blueprintWidth*16;
                 b.add("dark",-15,6,-18,30,4,36); b.add("paint",-12,10,-17,24,8,28);
                 b.cabin(18,18,14,-10,17); b.add("paint",-11,13,7,22,8,9);
                 b.vents(-11.3,14,8,4); b.vents(11.1,14,8,4);
@@ -137,7 +161,7 @@ public final class VehicleGeometry {
                 double length=cargo?37:32;
                 b.add("dark",-11,5,-length/2,22,3,length); b.add("paint",-12,8,-length/2,24,5,length);
                 b.axle("front",23,11,5); b.axle("rear",23,-11,5);
-                b.add("paint",-11,13,7,22,4,9); b.cabin(21,13,11,-5,13);
+                b.add("paint",-11,13,7,22,4,9);
                 b.add("seat",-9,13,-length/2+1,18,1,length/2-6);
                 b.add("paint",-12,13,-length/2,2,5,length/2-5); b.add("paint",10,13,-length/2,2,5,length/2-5); b.add("paint",-12,13,-length/2,24,5,1.5);
                 b.add("metal",-12,7,16,24,2,1.5); b.add("metal",-12,7,-length/2-1,24,2,1.5);
@@ -152,82 +176,59 @@ public final class VehicleGeometry {
                 b.add("paint",-2.8,13,3,5.6,3,6);
                 String fork=b.group("front_fork","metal",0,5.5,12,'u');
                 for(int side:new int[]{-1,1}) { b.addTo(fork,side*2-.4,-.5,-2,.8,14,.8); b.add("metal",side*4-.6,7,-12,1.2,1.2,10); b.add("metal",side*5-.7,12,5,1.4,.7,5); }
-                b.add("accent",-2,16,10,4,2,1); b.add("paint",-2,11,9,4,1,7); b.add("paint",-2.5,11,-15,5,1,7);
+                String fender=b.group("front_fender","paint",0,5.5,12,'u'); b.addTo(fender,-2,5.5,-3,4,1,7); b.add("paint",-2.5,11,-15,5,1,7);
                 if(cargo) for(int side:new int[]{-1,1}) { b.add("seat",side*5-2,8,-13,4,6,7); b.add("metal",side*5-2,14,-13,4,.5,7); }
             }
             case BOAT -> {
-                double w=type.width*16,length=cargo?40:34;
-                for(int layer=0;layer<5;layer++) b.add("paint",-w/2+5-layer,layer*1.3,-length/2+3-layer,w-10+layer*2,1.3,length-6+layer*2);
-                b.add("dark",-w/2+2,6,-length/2+2,w-4,.6,length-4);
-                for(int side:new int[]{-1,1}) { b.add("paint",side*(w/2-1)-1,6,-length/2,2,5,length-4); b.add("metal",side*(w/2-2)-.3,11,-length/2,.6,.6,length-4); for(int i=0;i<3;i++) b.add("metal",side*(w/2-3)-.3,8,i*7-8,.6,4,.6); }
-                b.add("paint",-w/2+2,6,length/2-6,w-4,3,6); b.add("paint",-w/2+3,8,2,w-6,3,3); b.add("glass",-w/2+3,11,3,w-6,4,.5);
+                double w=type.blueprintWidth*16,length=boatLength(type);
+                // Stepped V-bow with narrow foredeck slices.
+                for(int layer=0;layer<5;layer++) {
+                    double half=w/2-5+layer,yy=layer*1.3;
+                    b.add("paint",-half,yy,-length/2+3-layer,half*2,1.3,length-12+layer);
+                    for(int step=0;step<8;step++) { double taper=half*(1-step*.125); b.add("paint",-taper,yy,length/2-9+step*1.05,taper*2,1.3,1.05); }
+                }
+                b.add("dark",-w/2+2,6,-length/2+2,w-4,.6,length-11);
+                for(int side:new int[]{-1,1}) { b.add("paint",side*(w/2-1)-1,6,-length/2,2,5,length-9); b.add("metal",side*(w/2-2)-.3,11,-length/2,.6,.6,length-9); for(int i=0;i<3;i++) b.add("metal",side*(w/2-3)-.3,8,i*7-8,.6,4,.6); }
+                for(int step=0;step<8;step++) { double half=(w/2-1)*(1-step*.125); b.add("paint",-half,6.5,length/2-9+step*1.05,half*2,1.5,1.05); }
+                b.add("paint",-w/2+3,8,10,w-6,4,3); b.add("glass",-w/2+3,12,11,w-6,6,.5);
                 String motor=b.group("outboard","dark",0,5,-length/2-1,'u'); b.addTo(motor,-3,0,-2,6,8,4); b.addTo(motor,-1,-5,-1,2,6,2);
                 String prop=b.group("propeller","metal",0,1,-length/2-3,'z'); b.addTo(prop,-4,-.4,-.4,8,.8,.8); b.addTo(prop,-.4,-4,-.4,.8,8,.8);
             }
-            case PLANE -> {
-                double span=type.width*16,length=cargo?54:44;
-                b.add("paint",-5,8,-length/2,10,8,length); b.add("paint",-4,6,-length/2+2,8,2,length-4);
-                for(int side:new int[]{-1,1}) {
-                    b.add("paint",side*(span/4+3)-span/4,10,-3,span/2,1.5,9);
-                    String flap=b.group("aileron_"+side,"paint",side*(span/4+3),10.75,-3,'e'); b.addTo(flap,-span/4,-.75,-2,span/2,1.5,2);
-                    b.add("metal",side*(span/2-2)-.3,11,-4,.6,.4,9); b.add("accent",side*(span/2-1)-1,10,1,2,1.6,3);
-                    b.add("metal",side*7-.5,3,-1,1,7,1); b.wheel("gear"+side,side*7,3,-1,2,3);
-                }
-                b.add("paint",-span*.24,12,-length/2+2,span*.48,1,5);
-                String elevator=b.group("elevator","paint",0,12.5,-length/2+2,'e'); b.addTo(elevator,-span*.24,-.5,-2,span*.48,1,2);
-                b.add("paint",-.7,13,-length/2+2,1.4,9,5);
-                String rudder=b.group("rudder","paint",0,17.5,-length/2+2,'v'); b.addTo(rudder,-.7,-4.5,-2,1.4,9,2);
-                b.add("dark",-3,9,length/2,6,6,2);
-                String prop=b.group("propeller","dark",0,12,length/2+2,'z'); b.addTo(prop,-.6,-9,-.6,1.2,18,1.2); b.addTo(prop,-9,-.6,-.6,18,1.2,1.2);
-                b.add("metal",-1,11,length/2+2,2,2,2);
-            }
-            case HELICOPTER -> {
-                b.add("paint",-9,9,-11,18,12,28); b.add("paint",-7,7,-10,14,2,26);
-                for(int side:new int[]{-1,1}) { b.add("glass",side*8.9,13,1,.4,7,9); b.add("paint",side*8.8,10,-8,.5,11,8); b.add("metal",side*9-.4,12,-2,.8,.6,2); b.add("metal",side*10-.6,3,-15,1.2,1.2,33); for(int z:new int[]{-8,8}) b.add("metal",side*8-.5,4,z,1,5,1); }
-                b.add("paint",-2,13,-35,4,4,24); b.add("paint",-.8,15,-35,1.6,9,5); b.add("paint",-7,15,-29,14,1,4);
-                String rotor=b.group("rotor","dark",0,40,-4,'y'); double r=type.width*10;
-                b.addTo(rotor,-r,-.3,-1.2,r*2,.6,2.4); b.addTo(rotor,-1.2,-.3,-r,2.4,.6,r*2);
-                String tail=b.group("tail_rotor","metal",3,19,-32,'x'); b.addTo(tail,-.3,-4,-.5,.6,8,1); b.addTo(tail,-.3,-.5,-4,.6,1,8);
-                if(cargo) b.add("metal",-3,5,-2,6,2,4);
-            }
             case DRONE -> {
-                double r=type.width*6;
-                b.add("paint",-4,5,-5,8,3,10); b.add("dark",-3,4,-4,6,1,8); b.add("glass",-1.7,3,5,3.4,2,1.5);
-                b.add("metal",-3,8,-3,6,4,6);
+                double r=type.blueprintWidth*6;
+                b.add("paint",-4,5,-5,8,3,10); b.add("dark",-3,4,-4,6,1,8);
+                b.add("metal",-3,8,-3,6,6,6);
                 for(int side:new int[]{-1,1}) b.add("metal",side*4-.6,11.5,5,1.2,.6,7);
                 for(int a:new int[]{-1,1}) for(int c:new int[]{-1,1}) {
                     b.add("metal",Math.min(0,a*r),6,c*r-.5,r,1,1); b.add("metal",a*r-.5,6,Math.min(0,c*r),1,1,r);
                     b.add("dark",a*r-1.5,6,c*r-1.5,3,2,3); String rotor=b.group("rotor_"+a+"_"+c,"dark",a*r,9,c*r,'y');
-                    b.addTo(rotor,-5,-.25,-.6,10,.5,1.2); b.add("metal",a*r-.4,1,c*r-.4,.8,5,.8);
+                    b.addTo(rotor,-3.6,-.25,-.6,7.2,.5,1.2); b.add("metal",a*r-.4,1,c*r-.4,.8,5,.8);
                 }
                 if(cargo) b.add("seat",-4,1,-4,8,3,8);
             }
+            default -> throw new IllegalArgumentException("No geometry: "+type);
         }
-        // Cut actual empty cockpits out of the old solid fuselages, not an opaque overlay.
         List<Part> hull=b.finish();
-        if(type.family==VehicleType.Family.PLANE) hull=cut(hull,-4.2,11,-8,4.2,60,6);
-        if(type.family==VehicleType.Family.HELICOPTER) hull=cut(hull,-8,11,-9,8,60,17);
-        Builder cabin=new Builder();
+        if(type.family==VehicleType.Family.PICKUP) hull=cut(hull,-7.5,6,-4.5,7.5,17,13);
+        Builder cabin=new Builder("cabin_");
         for(int i=0;i<type.seats;i++) {
             Seat s=seat(type,i); String group=cabin.group("seat_"+i,"seat",s.x,s.top,s.z,' ');
-            cabin.addTo(group,-3,-2,-3,6,2,6); cabin.addTo(group,-3,0,-3,6,6,1);
+            cabin.addTo(group,-3,-2,-3,6,2,6);
+            if(type.family!=VehicleType.Family.MOTORCYCLE || type==VehicleType.MOTORCYCLE_TOURING && i==1)
+                cabin.addTo(group,-3,0,-3,6,type.family==VehicleType.Family.MOTORCYCLE?4:6,1);
         }
         Seat s=seat(type,0);
-        if(type.family==VehicleType.Family.PLANE) cabin.add("glass",-4.2,16,6,8.4,7,.35);
-        if(type.family==VehicleType.Family.HELICOPTER) {
-            cabin.add("glass",-7,13,17,14,10,.35); cabin.add("dark",-3,18,-10,6,6,7); cabin.add("metal",-.7,24,-4,1.4,16,1.4);
-        }
         if(type.family==VehicleType.Family.DOZER || type.verticalAircraft()) {
             for(int side:new int[]{-1,1}) { String lever=cabin.group(side<0?"lever_left":"lever_right","metal",side*3,s.top+2,s.z+7,side<0?'l':'r'); cabin.addTo(lever,-.3,0,-.3,.6,4,.6); cabin.addTo(lever,-1,3,-.6,2,1,1.2); }
         } else {
             boolean bike=type.family==VehicleType.Family.MOTORCYCLE;
-            String control=cabin.group("steering","metal",0,s.top+5,s.z+9,bike?'u':'c');
+            String control=cabin.group("steering","metal",0,s.top+5,s.z+(bike?7.5:8),bike?'u':'c');
             if(bike) { cabin.addTo(control,-6,-.4,-.4,12,.8,.8); cabin.addTo(control,-6,-.6,-1,2,1.2,2); cabin.addTo(control,4,-.6,-1,2,1.2,2); }
             else { cabin.addTo(control,-3,-2,-.3,6,.5,.6); cabin.addTo(control,-3,1.5,-.3,6,.5,.6); cabin.addTo(control,-3,-2,-.3,.5,4,.6); cabin.addTo(control,2.5,-2,-.3,.5,4,.6); cabin.addTo(control,-.25,-2,-.3,.5,4,.6); }
         }
-        List<Part> result=new ArrayList<>(hull); result.addAll(cabin.finish()); return List.copyOf(result);
+        List<Part> result=new ArrayList<>(hull); result.addAll(cabin.finish());
+        return VehicleDetailing.enhance(type,result);
     }
-    /** Axis-aligned subtraction into disjoint slabs; keep all moving parts outside this operation. */
     private static List<Part> cut(List<Part> parts,double x0,double y0,double z0,double x1,double y1,double z1) {
         List<Part> out=new ArrayList<>();
         for(Part p:parts) {
@@ -241,7 +242,7 @@ public final class VehicleGeometry {
                 slab(boxes,lx,ay,az,hx,ly,bz); slab(boxes,lx,hy,az,hx,by,bz);
                 slab(boxes,lx,ly,az,hx,hy,lz); slab(boxes,lx,ly,hz,hx,hy,bz);
             }
-            if(!boxes.isEmpty()) out.add(new Part(p.name,p.material,p.px,p.py,p.pz,p.axis,List.copyOf(boxes)));
+            if(!boxes.isEmpty()) out.add(new Part(p.name,p.material,p.px,p.py,p.pz,p.axis,List.copyOf(boxes),p.restPitch,p.restYaw,p.restRoll));
         }
         return List.copyOf(out);
     }

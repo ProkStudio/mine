@@ -1,0 +1,149 @@
+{
+  "sourceCommit": "07c911a962b5cbd8d4f0d6211a5355ff2891b3ce",
+  "runUrl": "https://github.com/ProkStudio/mine/actions/runs/34143304469",
+  "jobOutcome": "success",
+  "releaseTag": "v1.3.0-rc.1",
+  "releasePublished": true,
+  "minecraftClientAcceptance": "not_run",
+  "inGameListening": "not_run",
+  "buildInfo": {
+    "version": "1.3.0-rc.1",
+    "sourceCommit": "07c911a962b5cbd8d4f0d6211a5355ff2891b3ce",
+    "workflowRun": "https://github.com/ProkStudio/mine/actions/runs/34143304469",
+    "minecraft": "1.21.11",
+    "java": 21,
+    "fabricLoaderBuiltWith": "0.19.5",
+    "fabricApiBuiltWith": "0.141.6+1.21.11",
+    "requiredJUnitMethods": 59,
+    "observedJUnitCases": 59,
+    "geometryVariants": 16,
+    "jar": {
+      "file": "harvester-mod-1.3.0-rc.1.jar",
+      "sha256": "9274997cee5fce46e4af8a1e5ad401a729f22590f02097303a5c4f35bb522511",
+      "bytes": 1645388
+    },
+    "audio": {
+      "engine": {
+        "sha256": "073477a4f941d30a6dba50b2c3f69b70b2d8062dbf70e06be55f8bdf44bc6ce0",
+        "bytes": 34713,
+        "samples": 128000,
+        "channels": 1,
+        "sampleRate": 32000,
+        "rmsDb": -18.4742,
+        "peak": 0.397949,
+        "seamDelta": 0.023102,
+        "dcOffset": 0.000486
+      },
+      "motorcycle": {
+        "sha256": "e4f4d88b881f742f613e13dbaff79f9b1fd608a1ff9f7c52e4956b2f522da936",
+        "bytes": 34388,
+        "samples": 128000,
+        "channels": 1,
+        "sampleRate": 32000,
+        "rmsDb": -18.4583,
+        "peak": 0.401825,
+        "seamDelta": 0.001221,
+        "dcOffset": 0.000113
+      },
+      "boat": {
+        "sha256": "34819135cfc7ce727217df135208a6dc321ee57e8accc654607f1e43c9f8d39a",
+        "bytes": 34714,
+        "samples": 128000,
+        "channels": 1,
+        "sampleRate": 32000,
+        "rmsDb": -18.4901,
+        "peak": 0.394562,
+        "seamDelta": 0.04776,
+        "dcOffset": 0.000239
+      },
+      "plane": {
+        "sha256": "473e1d543020c90356fbec7458427c94b6a75a3db9335cb0badcb7a7bd9897da",
+        "bytes": 34563,
+        "samples": 128000,
+        "channels": 1,
+        "sampleRate": 32000,
+        "rmsDb": -18.4685,
+        "peak": 0.384399,
+        "seamDelta": 0.035828,
+        "dcOffset": 0.000134
+      },
+      "helicopter": {
+        "sha256": "d98eeeae28515fb47fe3886d0f057619102198d8e9def53869708eb88bfdf045",
+        "bytes": 35264,
+        "samples": 128000,
+        "channels": 1,
+        "sampleRate": 32000,
+        "rmsDb": -18.4984,
+        "peak": 0.471344,
+        "seamDelta": 0.005432,
+        "dcOffset": 0.000141
+      },
+      "drone": {
+        "sha256": "989840fadee6ea0dbc4e272cda06e428474cdf42ff97adb383d0a2a7267b9647",
+        "bytes": 35274,
+        "samples": 128000,
+        "channels": 1,
+        "sampleRate": 32000,
+        "rmsDb": -18.3931,
+        "peak": 0.316254,
+        "seamDelta": 0.018097,
+        "dcOffset": 2.2e-05
+      }
+    },
+    "minecraftClientAcceptance": "not_run",
+    "inGameListening": "not_run",
+    "textureVisualAcceptance": "not_run",
+    "license": "CC0-1.0"
+  },
+  "releaseUrl": "https://github.com/ProkStudio/mine/releases/tag/v1.3.0-rc.1",
+  "assets": [
+    {
+      "name": "BUILD-INFO.json",
+      "bytes": 2538,
+      "digest": "sha256:891f44d0df42fbf64b3ada0d47be47c5b20fc3ceaf4860c6d8d5df1a790f49cd",
+      "url": "https://github.com/ProkStudio/mine/releases/download/v1.3.0-rc.1/BUILD-INFO.json"
+    },
+    {
+      "name": "harvester-mod-1.3.0-rc.1.jar",
+      "bytes": 1645388,
+      "digest": "sha256:9274997cee5fce46e4af8a1e5ad401a729f22590f02097303a5c4f35bb522511",
+      "url": "https://github.com/ProkStudio/mine/releases/download/v1.3.0-rc.1/harvester-mod-1.3.0-rc.1.jar"
+    },
+    {
+      "name": "harvester-transport-1.3.0-rc.1-mc1.21.11.zip",
+      "bytes": 1628173,
+      "digest": "sha256:1064c6d36d9b06b3cb23df29b6b1af3475810e0acb0631f3b9a444cb52cbd7fa",
+      "url": "https://github.com/ProkStudio/mine/releases/download/v1.3.0-rc.1/harvester-transport-1.3.0-rc.1-mc1.21.11.zip"
+    },
+    {
+      "name": "INSTALL_RU.md",
+      "bytes": 6191,
+      "digest": "sha256:7461497abd05d3090662276e1d2ee465dd6347dff60c788048133bef4e692c9b",
+      "url": "https://github.com/ProkStudio/mine/releases/download/v1.3.0-rc.1/INSTALL_RU.md"
+    },
+    {
+      "name": "LICENSE.txt",
+      "bytes": 7047,
+      "digest": "sha256:6d489af6292662d9e36d34ce49423784984a5f6e41d7b58f49b01264df59fa03",
+      "url": "https://github.com/ProkStudio/mine/releases/download/v1.3.0-rc.1/LICENSE.txt"
+    },
+    {
+      "name": "QA.md",
+      "bytes": 5873,
+      "digest": "sha256:65ce1ae96e54430d3079148e7253a41662032beafac6f0686870e616c64ab761",
+      "url": "https://github.com/ProkStudio/mine/releases/download/v1.3.0-rc.1/QA.md"
+    },
+    {
+      "name": "RELEASE-NOTES.md",
+      "bytes": 5302,
+      "digest": "sha256:77d248bb3d11824a5bc8877f14e75cbca0a1c0e91d2af388add57e191d647631",
+      "url": "https://github.com/ProkStudio/mine/releases/download/v1.3.0-rc.1/RELEASE-NOTES.md"
+    },
+    {
+      "name": "SHA256SUMS",
+      "bytes": 601,
+      "digest": "sha256:d2322feca371b4a0224d0e4e32c2b8f582477f6255a56f643bbdb5476c894b14",
+      "url": "https://github.com/ProkStudio/mine/releases/download/v1.3.0-rc.1/SHA256SUMS"
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+Historical failed PR run, NOT the release build: https://github.com/ProkStudio/mine/actions/runs/34141419192
+build	Clean build including client code, JUnit and resource validation	﻿2026-09-07T16:03:56.1514195Z ##[group]Run set -euo pipefail
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:56.1514463Z ^[[36;1mset -euo pipefail^[[0m
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:56.1515524Z ^[[36;1mbash ./gradlew --no-daemon --no-build-cache --rerun-tasks --stacktrace clean build 2>&1 | tee "$RUNNER_TEMP/mine-build.log"^[[0m
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:56.1547717Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:56.1547992Z env:
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:56.1548198Z   GRADLE_USER_HOME: /home/runner/work/_temp/gradle-home
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:56.1548535Z   JAVA_TOOL_OPTIONS: -Djava.io.tmpdir=/home/runner/work/_temp/java-tmp
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:56.1548874Z   GRADLE_ACTION_ID: gradle/actions/wrapper-validation
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:56.1549194Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:56.1549561Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.12-1/x64
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:56.1549856Z   MAVEN_ARGS: -ntp
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:56.1550027Z ##[endgroup]
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:56.1698557Z Picked up JAVA_TOOL_OPTIONS: -Djava.io.tmpdir=/home/runner/work/_temp/java-tmp
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:56.4275687Z Fetching distribution (retrying 3 times, with an initial back off of 2000 ms).
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:56.4280074Z Downloading https://services.gradle.org/distributions/gradle-9.2.0-bin.zip
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:58.4387869Z ............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%.............100%
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:59.6065420Z 
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:59.6085825Z Welcome to Gradle 9.2.0!
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:59.6105348Z 
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:59.6115469Z Here are the highlights of this release:
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:59.6135796Z  - Windows ARM support
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:59.6136338Z  - Improved publishing APIs
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:59.6136980Z  - Better guidance for dependency verification failures
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:59.6154255Z 
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:59.6155086Z For more details see https://docs.gradle.org/9.2.0/release-notes.html
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:59.6155673Z 
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:03:59.7058752Z To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.2.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:00.8061246Z Daemon will be stopped at the end of the build 
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:13.9073634Z 
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:13.9079690Z > Configure project :
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:13.9080344Z Fabric Loom: 1.14.10
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3067247Z 
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3095897Z FAILURE: Build failed with an exception.
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3149640Z 
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3149934Z * What went wrong:
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3150362Z A problem occurred configuring root project 'harvester-mod'.
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3151022Z > Failed to setup Minecraft, net.fabricmc.loom.util.download.DownloadException: Failed to download
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3151541Z 
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3151651Z * Try:
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3151992Z > Run with --info or --debug option to get more log output.
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3152489Z > Run with --scan to generate a Build Scan (powered by Develocity).
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3152984Z > Get more help at https://help.gradle.org.
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3153250Z 
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3153369Z * Exception is:
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3153960Z org.gradle.api.ProjectConfigurationException: A problem occurred configuring root project 'harvester-mod'.
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3155181Z 	at org.gradle.configuration.project.LifecycleProjectEvaluator.wrapException(LifecycleProjectEvaluator.java:84)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3156409Z 	at org.gradle.configuration.project.LifecycleProjectEvaluator.addConfigurationFailure(LifecycleProjectEvaluator.java:77)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3157676Z 	at org.gradle.configuration.project.LifecycleProjectEvaluator.access$500(LifecycleProjectEvaluator.java:55)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3158861Z 	at org.gradle.configuration.project.LifecycleProjectEvaluator$NotifyAfterEvaluate.run(LifecycleProjectEvaluator.java:255)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3160015Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+... bounded diagnostic excerpt ...
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3280210Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3281225Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3282380Z 	at org.gradle.configuration.BuildOperationFiringProjectsPreparer.prepareProjects(BuildOperationFiringProjectsPreparer.java:40)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3283621Z 	at org.gradle.initialization.VintageBuildModelController.lambda$prepareProjects$2(VintageBuildModelController.java:83)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3284719Z 	at org.gradle.internal.model.StateTransitionController.lambda$doTransition$14(StateTransitionController.java:255)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3309132Z 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3309781Z 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:254)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3310449Z 	at org.gradle.internal.model.StateTransitionController.lambda$transitionIfNotPreviously$11(StateTransitionController.java:213)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3311063Z 	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:35)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3311657Z 	at org.gradle.internal.model.StateTransitionController.transitionIfNotPreviously(StateTransitionController.java:209)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3312330Z 	at org.gradle.initialization.VintageBuildModelController.prepareProjects(VintageBuildModelController.java:83)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3312990Z 	at org.gradle.initialization.VintageBuildModelController.prepareToScheduleTasks(VintageBuildModelController.java:70)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3313915Z 	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$prepareToScheduleTasks$6(DefaultBuildLifecycleController.java:175)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3314603Z 	at org.gradle.internal.model.StateTransitionController.lambda$doTransition$14(StateTransitionController.java:255)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3315473Z 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3316067Z 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:254)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3316670Z 	at org.gradle.internal.model.StateTransitionController.lambda$maybeTransition$9(StateTransitionController.java:190)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3317220Z 	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:35)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3317755Z 	at org.gradle.internal.model.StateTransitionController.maybeTransition(StateTransitionController.java:186)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3318436Z 	at org.gradle.internal.build.DefaultBuildLifecycleController.prepareToScheduleTasks(DefaultBuildLifecycleController.java:173)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3319173Z 	at org.gradle.internal.buildtree.DefaultBuildTreeWorkPreparer.scheduleRequestedTasks(DefaultBuildTreeWorkPreparer.java:35)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3319976Z 	at org.gradle.internal.cc.impl.barrier.BarrierAwareBuildTreeWorkPreparer.scheduleRequestedTasks$lambda$0(BarrierAwareBuildTreeWorkPreparer.kt:34)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3320998Z 	at org.gradle.internal.cc.impl.barrier.VintageConfigurationTimeActionRunner.runConfigurationTimeAction(VintageConfigurationTimeActionRunner.kt:48)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3321856Z 	at org.gradle.internal.cc.impl.barrier.BarrierAwareBuildTreeWorkPreparer.scheduleRequestedTasks(BarrierAwareBuildTreeWorkPreparer.kt:33)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3322638Z 	at org.gradle.internal.cc.impl.VintageBuildTreeWorkController$scheduleAndRunRequestedTasks$1.apply(VintageBuildTreeWorkController.kt:36)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3323394Z 	at org.gradle.internal.cc.impl.VintageBuildTreeWorkController$scheduleAndRunRequestedTasks$1.apply(VintageBuildTreeWorkController.kt:35)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3324115Z 	at org.gradle.composite.internal.DefaultIncludedBuildTaskGraph.withNewWorkGraph(DefaultIncludedBuildTaskGraph.java:114)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3325080Z 	at org.gradle.internal.cc.impl.VintageBuildTreeWorkController.scheduleAndRunRequestedTasks(VintageBuildTreeWorkController.kt:35)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3326363Z 	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.lambda$scheduleAndRunTasks$1(DefaultBuildTreeLifecycleController.java:77)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3327646Z 	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.lambda$runBuild$4(DefaultBuildTreeLifecycleController.java:120)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3328778Z 	at org.gradle.internal.model.StateTransitionController.lambda$transition$6(StateTransitionController.java:169)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3329774Z 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3330803Z 	at org.gradle.internal.model.StateTransitionController.lambda$transition$7(StateTransitionController.java:169)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3331721Z 	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:45)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3332591Z 	at org.gradle.internal.model.StateTransitionController.transition(StateTransitionController.java:169)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3333622Z 	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.runBuild(DefaultBuildTreeLifecycleController.java:117)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3335114Z 	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.scheduleAndRunTasks(DefaultBuildTreeLifecycleController.java:77)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3336369Z 	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.scheduleAndRunTasks(DefaultBuildTreeLifecycleController.java:72)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3337423Z 	at org.gradle.tooling.internal.provider.ExecuteBuildActionRunner.run(ExecuteBuildActionRunner.java:31)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3338486Z 	at org.gradle.launcher.exec.ChainingBuildActionRunner.run(ChainingBuildActionRunner.java:35)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3343255Z 	at org.gradle.internal.buildtree.ProblemReportingBuildActionRunner.run(ProblemReportingBuildActionRunner.java:54)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3344363Z 	at org.gradle.launcher.exec.BuildOutcomeReportingBuildActionRunner.run(BuildOutcomeReportingBuildActionRunner.java:83)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3345655Z 	at org.gradle.tooling.internal.provider.FileSystemWatchingBuildActionRunner.run(FileSystemWatchingBuildActionRunner.java:135)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3346807Z 	at org.gradle.launcher.exec.BuildCompletionNotifyingBuildActionRunner.run(BuildCompletionNotifyingBuildActionRunner.java:54)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3348005Z 	at org.gradle.launcher.exec.RootBuildLifecycleBuildActionExecutor.lambda$execute$0(RootBuildLifecycleBuildActionExecutor.java:56)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3349015Z 	at org.gradle.composite.internal.DefaultRootBuildState.run(DefaultRootBuildState.java:126)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3350032Z 	at org.gradle.launcher.exec.RootBuildLifecycleBuildActionExecutor.execute(RootBuildLifecycleBuildActionExecutor.java:56)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3351216Z 	at org.gradle.internal.buildtree.InitDeprecationLoggingActionExecutor.execute(InitDeprecationLoggingActionExecutor.java:62)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3351946Z 	at org.gradle.internal.buildtree.InitProblems.execute(InitProblems.java:36)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3352446Z 	at org.gradle.internal.buildtree.DefaultBuildTreeContext.execute(DefaultBuildTreeContext.java:40)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3353305Z 	at org.gradle.launcher.exec.BuildTreeLifecycleBuildActionExecutor.lambda$execute$0(BuildTreeLifecycleBuildActionExecutor.java:71)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3353902Z 	at org.gradle.internal.buildtree.BuildTreeState.run(BuildTreeState.java:60)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3354466Z 	at org.gradle.launcher.exec.BuildTreeLifecycleBuildActionExecutor.execute(BuildTreeLifecycleBuildActionExecutor.java:71)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3355571Z 	at org.gradle.launcher.exec.RunAsBuildOperationBuildActionExecutor$2.call(RunAsBuildOperationBuildActionExecutor.java:65)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3356820Z 	at org.gradle.launcher.exec.RunAsBuildOperationBuildActionExecutor$2.call(RunAsBuildOperationBuildActionExecutor.java:61)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3358082Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3358911Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3359647Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3360262Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3360873Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3361513Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3362112Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3362766Z 	at org.gradle.launcher.exec.RunAsBuildOperationBuildActionExecutor.execute(RunAsBuildOperationBuildActionExecutor.java:61)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3363487Z 	at org.gradle.launcher.exec.RunAsWorkerThreadBuildActionExecutor.lambda$execute$0(RunAsWorkerThreadBuildActionExecutor.java:36)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3364172Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$withLocksAcquired$0(DefaultWorkerLeaseService.java:269)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3364737Z 	at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:42)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3368758Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocksAcquired(DefaultWorkerLeaseService.java:267)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3369947Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:259)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3371036Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3371951Z 	at org.gradle.launcher.exec.RunAsWorkerThreadBuildActionExecutor.execute(RunAsWorkerThreadBuildActionExecutor.java:36)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3372702Z 	at org.gradle.tooling.internal.provider.continuous.ContinuousBuildActionExecutor.execute(ContinuousBuildActionExecutor.java:110)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3373452Z 	at org.gradle.tooling.internal.provider.SubscribableBuildActionExecutor.execute(SubscribableBuildActionExecutor.java:64)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3374093Z 	at org.gradle.internal.session.DefaultBuildSessionContext.execute(DefaultBuildSessionContext.java:46)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3375016Z 	at org.gradle.internal.buildprocess.execution.BuildSessionLifecycleBuildActionExecutor$ActionImpl.apply(BuildSessionLifecycleBuildActionExecutor.java:92)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3375933Z 	at org.gradle.internal.buildprocess.execution.BuildSessionLifecycleBuildActionExecutor$ActionImpl.apply(BuildSessionLifecycleBuildActionExecutor.java:80)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3376615Z 	at org.gradle.internal.session.BuildSessionState.run(BuildSessionState.java:73)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3377279Z 	at org.gradle.internal.buildprocess.execution.BuildSessionLifecycleBuildActionExecutor.execute(BuildSessionLifecycleBuildActionExecutor.java:62)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3378838Z 	at org.gradle.internal.buildprocess.execution.BuildSessionLifecycleBuildActionExecutor.execute(BuildSessionLifecycleBuildActionExecutor.java:41)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3380011Z 	at org.gradle.internal.buildprocess.execution.StartParamsValidatingActionExecutor.execute(StartParamsValidatingActionExecutor.java:57)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3380831Z 	at org.gradle.internal.buildprocess.execution.StartParamsValidatingActionExecutor.execute(StartParamsValidatingActionExecutor.java:32)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3381668Z 	at org.gradle.internal.buildprocess.execution.SessionFailureReportingActionExecutor.execute(SessionFailureReportingActionExecutor.java:51)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3382516Z 	at org.gradle.internal.buildprocess.execution.SessionFailureReportingActionExecutor.execute(SessionFailureReportingActionExecutor.java:39)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3383272Z 	at org.gradle.internal.buildprocess.execution.SetupLoggingActionExecutor.execute(SetupLoggingActionExecutor.java:47)
+build	Clean build including client code, JUnit and resource validation	2026-09-07T16:04:16.3384410Z 	at or

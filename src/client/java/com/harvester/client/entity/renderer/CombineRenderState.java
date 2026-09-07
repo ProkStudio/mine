@@ -2,6 +2,8 @@ package com.harvester.client.entity.renderer;
 
 import com.harvester.vehicle.VehicleType;
 import com.harvester.vehicle.VehicleRig;
+import com.harvester.vehicle.VehiclePresentation;
+import com.harvester.vehicle.VehicleMechanics;
 import net.minecraft.client.render.entity.state.EntityRenderState;
 import java.util.Map;
 
@@ -13,6 +15,8 @@ public class CombineRenderState extends EntityRenderState {
     public double wheelTravel,yawTravel;
     public boolean harvesting,engineActive,headerEnabled=true;
     public VehicleRig.Pose bodyPose=VehicleRig.Pose.ZERO;
+    public VehiclePresentation.Frame presentation=VehiclePresentation.Frame.REST;
     public Map<String,Float> suspension=Map.of();
+    public VehicleMechanics.Frame mechanics=VehicleMechanics.Frame.REST;
     public float limbSwingAnimationProgress;
 }
