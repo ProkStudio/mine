@@ -39,6 +39,16 @@ public final class VehiclePolishSmoke {
                     }
                 }
             }
+            if(type.family==VehicleType.Family.DOZER) {
+                var rods=parts.stream().filter(p->p.name().equals("metal")).flatMap(p->p.boxes().stream()).filter(b->b.y()==8 && b.z()==10 && b.d()==15).toList();
+                check(rods.size()==2 && rods.stream().allMatch(b->b.y()+b.h()>10.05),"Blade rods clear chassis top");
+                var belts=parts.stream().filter(p->p.name().equals("rubber")).flatMap(p->p.boxes().stream()).filter(b->b.h()==3 && b.d()==36).toList();
+                check(belts.size()==4 && belts.stream().allMatch(b->b.w()<5.9),"Track edges avoid coincident belt side faces");
+            }
+            if(type.family==VehicleType.Family.MOTORCYCLE) for(int i=0;i<2;i++) {
+                final int seat=i;var bar=parts.stream().filter(p->p.name().equals("footrest_crossbar_"+seat)).findFirst().orElseThrow().boxes().getFirst();
+                check(bar.y()+bar.h()<VehicleGeometry.seat(type,i).top()-3.1,"Footrest avoids coincident top faces");
+            }
             export(output,type,parts);System.out.println(type.id+": "+cubes+" cuboids; "+parts.size()+" parts; atlas="+atlas.size());
         }
         for(int i=0;i<=400;i++) {

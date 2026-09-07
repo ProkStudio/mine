@@ -45,6 +45,8 @@ class VehicleReleasePolishTest {
             if(t.family==VehicleType.Family.DOZER) {
                 var rods=parts.stream().filter(p->p.name().equals("metal")).flatMap(p->p.boxes().stream()).filter(b->b.y()==8 && b.z()==10 && b.d()==15).toList();
                 assertEquals(2,rods.size());assertTrue(rods.stream().allMatch(b->b.y()+b.h()>10.05),"Blade rods must clear the chassis top plane");
+                var belts=parts.stream().filter(p->p.name().equals("rubber")).flatMap(p->p.boxes().stream()).filter(b->b.h()==3 && b.d()==36).toList();
+                assertEquals(4,belts.size());assertTrue(belts.stream().allMatch(b->b.w()<5.9),"Moving track edges must clear the rubber side plane");
             }
             if(t.family==VehicleType.Family.MOTORCYCLE) for(int i=0;i<2;i++) {
                 int seat=i;var bar=parts.stream().filter(p->p.name().equals("footrest_crossbar_"+seat)).findFirst().orElseThrow().boxes().getFirst();
