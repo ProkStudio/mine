@@ -22,7 +22,7 @@ public final class PassengerAnimation {
             steer=clamp(in.steer(),-1,1);drive=clamp(in.drive(),-1,1);speed=clamp(in.speed(),-.65,.65);
             acceleration=0;work=in.working()?1:0;weight=0;
         } else if(dt>0) {
-            steer=approach(steer,clamp(in.steer(),-1,1),.45,dt);
+            steer=approach(steer,clamp(in.steer(),-1,1),type.family==VehicleType.Family.DOZER || type.verticalAircraft()?.45:.4,dt);
             drive=approach(drive,clamp(in.drive(),-1,1),.35,dt);
             double old=speed;speed=approach(speed,clamp(in.speed(),-.65,.65),.3,dt);
             acceleration=approach(acceleration,clamp((speed-old)/dt,-.035,.035),.25,dt);
@@ -59,8 +59,8 @@ public final class PassengerAnimation {
     public static Grip grip(VehicleType type,int side,double steering,double drive) {
         steering=clamp(steering,-1,1);drive=clamp(drive,-1,1);side=side<0?-1:1;
         if(type.family==VehicleType.Family.MOTORCYCLE) {
-            double a=-steering*Math.toRadians(22),x=side*5;
-            return new Grip(x*Math.cos(a),5,7.5-x*Math.sin(a));
+            double a=-steering*Math.toRadians(22),x=side*5,seatZ=VehicleGeometry.seat(type,0).z(),dz=seatZ+7.5-12;
+            return new Grip(x*Math.cos(a)+dz*Math.sin(a),5,12-seatZ+dz*Math.cos(a)-x*Math.sin(a));
         }
         if(type.family==VehicleType.Family.DOZER || type.verticalAircraft()) {
             double a=clamp(drive+(side<0?-steering:steering),-1,1)*.3;
