@@ -42,6 +42,14 @@ class VehicleReleasePolishTest {
         for(var t:VehicleType.values()) {
             var parts=VehicleGeometry.create(t);String root=switch(t.family) {case COMBINE -> "header_chassis_anchor_1";case DOZER -> "blade_anchor_1";case PICKUP -> "steering_pedestal";case MOTORCYCLE -> "front_yoke";case BOAT -> "outboard_gearcase";case PLANE -> "propeller_shaft";case HELICOPTER -> "tail_rotor_gearbox";case DRONE -> "radial_boom_1_1";};
             assertTrue(parts.stream().anyMatch(p->p.name().equals(root)),t.id);assertTrue(VehicleMechanics.renderRadius(t,parts)>t.width/2);assertTrue(parts.stream().mapToInt(p->p.boxes().size()).sum()<900);
+            if(t.family==VehicleType.Family.DOZER) {
+                var rods=parts.stream().filter(p->p.name().equals("metal")).flatMap(p->p.boxes().stream()).filter(b->b.y()==8 && b.z()==10 && b.d()==15).toList();
+                assertEquals(2,rods.size());assertTrue(rods.stream().allMatch(b->b.y()+b.h()>10.05),"Blade rods must clear the chassis top plane");
+            }
+            if(t.family==VehicleType.Family.MOTORCYCLE) for(int i=0;i<2;i++) {
+                int seat=i;var bar=parts.stream().filter(p->p.name().equals("footrest_crossbar_"+seat)).findFirst().orElseThrow().boxes().getFirst();
+                assertTrue(bar.y()+bar.h()<VehicleGeometry.seat(t,i).top()-3.1,"Footrest must not share the mudguard/engine top plane");
+            }
         }
     }
 }

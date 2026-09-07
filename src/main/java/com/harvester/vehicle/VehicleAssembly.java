@@ -65,6 +65,12 @@ public final class VehicleAssembly {
     public static List<Part> complete(VehicleType type,List<Part> original) {
         VehicleAssembly a=new VehicleAssembly();List<Cuboid> headerBolts=new ArrayList<>();
         for(Part p:original) {
+            // Blade pushrods must not share the chassis top plane: avoid visible z-fighting.
+            if(type.family==VehicleType.Family.DOZER && p.name().equals("metal")) {
+                List<Cuboid> separated=new ArrayList<>();
+                for(Cuboid b:p.boxes()) separated.add(b.y()==8 && b.z()==10 && b.w()==2 && b.h()==2 && b.d()==15 ? box(b.x(),b.y(),b.z(),b.w(),2.12,b.d()) : b);
+                p=new Part(p.name(),p.material(),p.px(),p.py(),p.pz(),p.axis(),List.copyOf(separated),p.restPitch(),p.restYaw(),p.restRoll());
+            }
             if(p.name().startsWith("header_ram_") || p.name().startsWith("blade_ram_") || p.name().equals("steering_column")) continue;
             if(type.family==VehicleType.Family.COMBINE && p.name().equals("detail_brass")) {
                 List<Cuboid> keep=new ArrayList<>();
@@ -113,11 +119,11 @@ public final class VehicleAssembly {
             case MOTORCYCLE -> {
                 a.part("front_yoke","metal",0,5.5,12,'u',0,box(-2.4,-.45,-2.1,4.8,.9,2.7),box(-2.4,13,-2.2,4.8,1,1.3),box(-.65,13,-4.3,1.3,1.6,3),box(-.65,14,-4.6,1.3,.8,1.8));
                 for(int side:new int[]{-1,1}) {
-                    a.fixed("rear_seat_rail_"+side,"metal",box(side*2.5-.4,11.5,-14,.8,2.7,11));
+                    a.fixed("rear_seat_rail_"+side,"metal",box(side*2.5-.4,11.5,-13.9,.8,2.7,10.9));
                     a.fixed("pillion_grip_bridge_"+side,"metal",box(side<0?-4.8:2.7,13,-10,2.1,.6,1));
                 }
-                for(int i=0;i<2;i++) { Seat s=seat(type,i);a.fixed("footrest_crossbar_"+i,"metal",box(-7,s.top()-3.7,s.z()+9.6,14,.7,.75)); }
-                a.fixed("steering_head","dark",box(-1.2,12,7,2.4,7,2.1));a.fixed("instrument_stalk","metal",box(-.45,16,9.4,.9,3.3,.7));
+                for(int i=0;i<2;i++) { Seat s=seat(type,i);a.fixed("footrest_crossbar_"+i,"metal",box(-7,s.top()-3.8,s.z()+9.6,14,.5,.75)); }
+                a.fixed("steering_head","dark",box(-1.2,12,7,2.4,7,2.1));a.fixed("instrument_stalk","metal",box(-.45,16,9.5,.9,3.3,.5));
                 a.part("signal_brake","red",0,13.55,-15.35,' ',0,box(-1.2,-.38,-.08,2.4,.76,.12));
                 a.part("rear_sprocket","metal",-2.0,5.5,-12,'x',0,box(-.2,-2,-.45,.4,4,.9),box(-.2,-.45,-2,.4,.9,4));
                 a.fixed("rear_axle","metal",box(-4.8,5.1,-12.4,9.6,.8,.8));
