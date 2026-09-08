@@ -1,0 +1,41 @@
+// Separate build-only configuration; neither JAVE nor FFmpeg is on the mod runtime classpath.
+configurations { truckAudioEncoder }
+def overrideEncoder = providers.gradleProperty('truckFfmpeg')
+def encoderVersion = '4.2.0'
+if (!overrideEncoder.isPresent()) {
+    def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+    def arch = System.getProperty('os.arch').toLowerCase(Locale.ROOT)
+    def arm = arch in ['aarch64', 'arm64']
+    def platform = os.contains('windows') ? (arm ? 'win-arm64' : 'win64') :
+        os.contains('mac') ? (arm ? 'osxm1' : 'osx64') : (arm ? 'arm64' : 'linux64')
+    dependencies {
+        truckAudioEncoder "ws.schild:jave-core:${encoderVersion}"
+        truckAudioEncoder "ws.schild:jave-nativebin-${platform}:${encoderVersion}"
+    }
+}
+def audioClasses = layout.buildDirectory.dir('truck-audio-classes')
+def audioResources = layout.buildDirectory.dir('generated/truck-audio')
+tasks.register('compileTruckAudio', JavaCompile) {
+    source = files('tools/GenerateEngineAudio.java')
+    classpath = files()
+    destinationDirectory = audioClasses
+    javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
+}
+tasks.register('generateTruckAudio', JavaExec) {
+    dependsOn compileTruckAudio
+    classpath = files(audioClasses) + configurations.truckAudioEncoder
+    mainClass = 'GenerateEngineAudio'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    systemProperty 'java.awt.headless', 'true'
+    args audioResources.get().asFile.absolutePath
+    if (overrideEncoder.isPresent()) args overrideEncoder.get()
+    inputs.file 'tools/GenerateEngineAudio.java'
+    inputs.property 'encoderVersion', encoderVersion
+    inputs.property 'encoderOverride', overrideEncoder.orElse('bundled').get()
+    if (overrideEncoder.isPresent()) inputs.file overrideEncoder.get()
+    outputs.dir audioResources
+    doFirst { project.delete(audioResources) }
+}
+sourceSets.main.resources.srcDir audioResources
+tasks.named('processResources') { dependsOn generateTruckAudio }
+tasks.named('sourcesJar') { dependsOn generateTruckAudio }

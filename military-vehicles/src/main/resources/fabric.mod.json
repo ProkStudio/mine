@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "militaryvehicles",
+  "version": "${version}",
+  "name": "Military Vehicles",
+  "description": "Eight ground vehicles: logistics, reconnaissance, personnel transport, tracked tank, fuel tanker, field workshop, recovery and deployable arcade PvE artillery. Server-authoritative shared systems and survival recipes.",
+  "authors": ["ProkStudio"],
+  "license": "CC0-1.0",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.prokstudio.militaryvehicles.MilitaryVehicles"],
+    "client": ["com.prokstudio.militaryvehicles.client.MilitaryVehiclesClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "=1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

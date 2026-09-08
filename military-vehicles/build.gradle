@@ -1,0 +1,92 @@
+plugins { id 'fabric-loom' version "${loom_version}" }
+repositories { mavenCentral() }
+loom {
+    splitEnvironmentSourceSets()
+    mods {
+        militaryvehicles {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+}
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    mappings "net.fabricmc:yarn:${yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+java { toolchain { languageVersion = JavaLanguageVersion.of(21) }; withSourcesJar() }
+tasks.withType(JavaCompile).configureEach { options.release = 21; options.encoding = 'UTF-8' }
+def artClasses = layout.buildDirectory.dir('art-classes')
+def artResources = layout.buildDirectory.dir('generated/assets')
+tasks.register('compileTruckArt', JavaCompile) {
+    source = files('tools/GenerateAssets.java', 'tools/GenerateRecipes.java', 'src/main/java/com/prokstudio/militaryvehicles/core/TruckGeometry.java',
+        'src/main/java/com/prokstudio/militaryvehicles/core/VehicleKind.java', 'src/main/java/com/prokstudio/militaryvehicles/core/VehicleGeometry.java',
+        'src/main/java/com/prokstudio/militaryvehicles/core/ExpansionGeometry.java')
+    classpath = files()
+    destinationDirectory = artClasses
+    javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
+}
+tasks.register('generateTruckArt', JavaExec) {
+    dependsOn compileTruckArt
+    classpath = files(artClasses)
+    mainClass = 'GenerateAssets'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    systemProperty 'java.awt.headless', 'true'
+    args artResources.get().asFile.absolutePath
+    inputs.files(tasks.named('compileTruckArt').map { it.source })
+    outputs.dir artResources
+    doFirst { project.delete(artResources) }
+}
+sourceSets.main.resources.srcDir artResources
+tasks.named('sourcesJar') { dependsOn generateTruckArt }
+processResources {
+    dependsOn generateTruckArt
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') { expand 'version': project.version }
+}
+test { useJUnitPlatform(); testLogging { events 'failed', 'skipped' } }
+tasks.register('coreSmoke', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.prokstudio.militaryvehicles.CoreSmoke'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+}
+check.dependsOn coreSmoke
+jar { from('../LICENSE') { rename { 'LICENSE_military-vehicles' } } }
+
+tasks.register('feedbackSmoke', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.prokstudio.militaryvehicles.FeedbackSmoke'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+}
+check.dependsOn feedbackSmoke
+apply from: 'audio.gradle'
+
+tasks.register('fleetSmoke', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.prokstudio.militaryvehicles.FleetSmoke'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+}
+check.dependsOn fleetSmoke
+
+tasks.register('operationsSmoke', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.prokstudio.militaryvehicles.OperationsSmoke'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+}
+check.dependsOn operationsSmoke
+
+tasks.register('tuningSmoke', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.prokstudio.militaryvehicles.TuningSmoke'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+}
+check.dependsOn tuningSmoke

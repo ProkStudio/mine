@@ -1,0 +1,61 @@
+{
+  "version": "0.3.0-alpha.2",
+  "verified_code_commit": "22a4e7ad0077fa270da00ce45867279b2c2c3c12",
+  "previous_code_commit": "d7ec68c7e0d62d0639e267cee4f7da2a07db2e47",
+  "ci_runs": [
+    {
+      "url": "https://github.com/ProkStudio/mine/actions/runs/34269534730",
+      "conclusion": "success"
+    },
+    {
+      "url": "https://github.com/ProkStudio/mine/actions/runs/34269531602",
+      "conclusion": "success"
+    }
+  ],
+  "mandatory_junit_cases": 112,
+  "previous_junit_cases": 93,
+  "added_junit_cases": 19,
+  "standalone_suites": 5,
+  "local_tuning_smoke": {
+    "status": "PASS",
+    "assertions": 902373,
+    "runtime": "Java 25.0.4",
+    "compiler_release": 21
+  },
+  "verified_changed_files": 22,
+  "blob_shas": {
+    "build.gradle": "3399abb5a6dc67e50b54d4371c13a000bc27eb3c",
+    "gradle.properties": "91475fa0cb6e0a557112f473ee7695ebded7139d",
+    "src/client/java/com/prokstudio/militaryvehicles/client/ClientFleetSettings.java": "a2cc358539740b71cd0eb21dfa1da2408b1b8b06",
+    "src/client/java/com/prokstudio/militaryvehicles/client/MilitaryVehiclesClient.java": "90340306d359e9e735da03b22dcd8a9f87dd23a7",
+    "src/main/java/com/prokstudio/militaryvehicles/MilitaryVehicles.java": "a6403679ff0f3d8de169662485b6e26ec0388086",
+    "src/main/java/com/prokstudio/militaryvehicles/config/FleetConfigFile.java": "02c9e7fcd2823de83e88a4b7302d9a1e51a97750",
+    "src/main/java/com/prokstudio/militaryvehicles/config/ServerFleetConfig.java": "8af994eec5832a6d8727c28fa7e993b6704bdc4f",
+    "src/main/java/com/prokstudio/militaryvehicles/core/FleetTuning.java": "045f39f874bef99cc4d7b52c3c2ba270568610b9",
+    "src/main/java/com/prokstudio/militaryvehicles/core/ServiceTargeting.java": "bdd8f23d5981d1f9b98f66664e1e6e34b62ce463",
+    "src/main/java/com/prokstudio/militaryvehicles/core/VehicleOperations.java": "1f931d75820044793d987d02b0e281c75563731d",
+    "src/main/java/com/prokstudio/militaryvehicles/entity/TruckEntity.java": "b2ed27359b41758dd69daacd0df8f730e6540fd4",
+    "src/main/java/com/prokstudio/militaryvehicles/entity/VehicleSystems.java": "032c40f5bfdb8a927f74f598cc43d01f815b6fc2",
+    "src/main/java/com/prokstudio/militaryvehicles/item/TruckItem.java": "3411d692ecc7f1f68455e81cae20ed4682b92f33",
+    "src/main/java/com/prokstudio/militaryvehicles/network/FleetSettingsPayload.java": "4b49c21918971dbe39834681f09b33df015b00dc",
+    "src/main/resources/assets/militaryvehicles/lang/en_us.json": "97cdcebce292fa883d37522a5dc609172433ef09",
+    "src/main/resources/assets/militaryvehicles/lang/ru_ru.json": "754a4b8a8060655a89355186b98341c91b76eb2e",
+    "src/test/java/com/prokstudio/militaryvehicles/FleetTuningCases.java": "09858e5862a4ec5fb8c9699d43cb1f450f81c16a",
+    "src/test/java/com/prokstudio/militaryvehicles/FleetTuningTest.java": "ef63f1f9ad8fe6576ebb90822245c77434f8ff4f",
+    "src/test/java/com/prokstudio/militaryvehicles/TuningSmoke.java": "c177de02690f0a20bf66376d1603c3892c1649b2",
+    "tests/run-core.sh": "064c3373db310c3b8f9166e00f7733c481f539ad",
+    "tests/run-tuning.sh": "e695da6df299f70a50445978095801315ed09bcd",
+    "tools/verify_build.py": "286d262db7214904636103d4a36eb73a28d51182"
+  },
+  "artifact_jar": "military-vehicles-0.3.0-alpha.2.jar",
+  "jar_downloaded_locally": false,
+  "jar_sha256": null,
+  "jar_checksum_source": "CI artifact verification.json",
+  "minecraft_client_tested": false,
+  "dedicated_server_tested": false,
+  "multiplayer_tested": false,
+  "in_game_audio_visual_performance_tested": false,
+  "active_worlds_modified": false,
+  "merged": false,
+  "stable_release": false
+}
