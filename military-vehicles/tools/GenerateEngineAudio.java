@@ -10,6 +10,8 @@ import java.util.concurrent.TimeUnit;
 /** Original, periodic CC0 mechanical loop. Encoder is a build tool, never a mod dependency. */
 public final class GenerateEngineAudio {
     private static final int RATE = 32000, SAMPLES = RATE * 4;
+    private static final String[] NAMES={"truck_engine","buggy_engine","carrier_engine"};
+    private static final double[] FIRING={28,46,21};
     public static void main(String[] args) throws Exception {
         if (args.length < 1 || args.length > 2) throw new IllegalArgumentException("output directory [ffmpeg executable]");
         String encoder;
@@ -22,10 +24,23 @@ public final class GenerateEngineAudio {
         Files.createDirectories(root);
         Path temp = Files.createTempDirectory("militaryvehicles-audio-");
         try {
-            double[] samples = synthesize();
+            List<String> entries=new ArrayList<>();
+            for(int profile=0;profile<NAMES.length;profile++) entries.add(generate(profile,encoder,root,temp));
+            Files.writeString(root.resolve("manifest.json"),"{"+String.join(",",entries)+"}\n",StandardCharsets.UTF_8);
+            Files.writeString(root.resolve("LICENSE.txt"),
+                "Original synthesized Military Vehicles audio, 2026. CC0-1.0, as the repository LICENSE. Three distinct procedural profiles, no sampled recordings. FFmpeg/JAVE are build tools, not included in the mod.\n",StandardCharsets.UTF_8);
+        } finally {
+            try (var walk = Files.walk(temp)) {
+                for (Path p : walk.sorted(Comparator.reverseOrder()).toList()) Files.deleteIfExists(p);
+            }
+        }
+    }
+
+    private static String generate(int profile,String encoder,Path root,Path temp) throws Exception {
+            double[] samples = synthesize(profile);
             ByteBuffer pcm = ByteBuffer.allocate(SAMPLES * 2).order(ByteOrder.LITTLE_ENDIAN);
             for (double value : samples) pcm.putShort((short) Math.round(value * 32767));
-            Path wav = temp.resolve("truck.wav"), ogg = root.resolve("truck_engine.ogg"), decoded = temp.resolve("decoded.pcm");
+            Path wav = temp.resolve("truck.wav"), ogg = root.resolve(NAMES[profile]+".ogg"), decoded = temp.resolve("decoded.pcm");
             AudioFormat format = new AudioFormat(RATE, 16, 1, true, false);
             try (var stream = new AudioInputStream(new ByteArrayInputStream(pcm.array()), format, SAMPLES)) {
                 AudioSystem.write(stream, AudioFileFormat.Type.WAVE, wav.toFile());
@@ -54,34 +69,27 @@ public final class GenerateEngineAudio {
             if (rms < .07 || rms > .20 || peak >= .95 || dc > .002 || seam > .06 || seam > maxStep * 1.5 + .001)
                 throw new IOException("Decoded audio quality contract failed: rms=" + rms + " peak=" + peak + " seam=" + seam + " dc=" + dc);
             String sha = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(data));
-            String manifest = String.format(Locale.ROOT,
-                "{\"truck_engine\":{\"sha256\":\"%s\",\"bytes\":%d,\"samples\":%d,\"channels\":1,\"sampleRate\":%d,\"rms\":%.8f,\"peak\":%.8f,\"seamDelta\":%.8f,\"dcOffset\":%.8f}}%n",
-                sha, data.length, SAMPLES, RATE, rms, peak, seam, dc);
-            Files.writeString(root.resolve("manifest.json"), manifest, StandardCharsets.UTF_8);
-            Files.writeString(root.resolve("LICENSE.txt"),
-                "Original synthesized Military Vehicles audio, 2026. CC0-1.0, as the repository LICENSE. No sampled recordings. FFmpeg/JAVE are external build tools, not included in the mod.\n",
-                StandardCharsets.UTF_8);
-            System.out.println("TRUCK_AUDIO_PASS " + manifest.strip());
-        } finally {
-            try (var walk = Files.walk(temp)) {
-                for (Path p : walk.sorted(Comparator.reverseOrder()).toList()) Files.deleteIfExists(p);
-            }
-        }
+            String manifest=String.format(Locale.ROOT,
+                "\"%s\":{\"sha256\":\"%s\",\"bytes\":%d,\"samples\":%d,\"channels\":1,\"sampleRate\":%d,\"rms\":%.8f,\"peak\":%.8f,\"seamDelta\":%.8f,\"dcOffset\":%.8f}",
+                NAMES[profile],sha,data.length,SAMPLES,RATE,rms,peak,seam,dc);
+            System.out.println("FLEET_AUDIO_PASS " + manifest);
+            return manifest;
     }
 
-    private static double[] synthesize() {
-        Random random = new Random(0x3658364D494C4CL);
+    private static double[] synthesize(int profile) {
+        Random random = new Random(0x3658364D494C4CL + profile*1337L);
         double[] noise = new double[SAMPLES];
         for (int i = 0; i < SAMPLES; i++) noise[i] = random.nextGaussian();
         double[] low = periodicLowpass(noise, .978), mid = periodicLowpass(noise, .74);
         double[] result = new double[SAMPLES]; double mean = 0;
         for (int i = 0; i < SAMPLES; i++) {
-            double t = i / (double) RATE, phase = 2 * Math.PI * 28 * t;
+            double t = i / (double) RATE, phase = 2 * Math.PI * FIRING[profile] * t;
             double pulse = Math.pow(Math.max(0, Math.sin(phase)), 10), body = 0;
             for (int h = 1; h <= 8; h++) body += Math.sin(phase * h + .17 * h) / Math.pow(h, 1.65);
             double breath = .82 + .18 * Math.sin(phase * .5);
-            result[i] = Math.tanh(.27 * body + .23 * (pulse - .123) + .055 * Math.sin(phase * .5)
-                + .9 * low[i] + (mid[i] - low[i]) * (.14 + .25 * pulse) * breath);
+            result[i] = Math.tanh((profile==1?.20:.27)*body + .23*(pulse-.123) + .055*Math.sin(phase*.5)
+                + (profile==1?.65:profile==2?1.10:.9)*low[i] + (mid[i]-low[i])*(.14+.25*pulse)*breath
+                + (profile==1?.035*Math.sin(phase*4):0));
             mean += result[i];
         }
         mean /= SAMPLES; double squares = 0, peak = 0;

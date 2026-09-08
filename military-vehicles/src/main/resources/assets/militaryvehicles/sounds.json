@@ -1,6 +1,29 @@
 {
   "truck_engine": {
-    "subtitle": "message.militaryvehicles.running",
-    "sounds": [{"name": "militaryvehicles:truck_engine", "attenuation_distance": 32}]
+    "subtitle": "subtitles.militaryvehicles.truck_engine",
+    "sounds": [
+      {
+        "name": "militaryvehicles:truck_engine",
+        "attenuation_distance": 32
+      }
+    ]
+  },
+  "buggy_engine": {
+    "subtitle": "subtitles.militaryvehicles.buggy_engine",
+    "sounds": [
+      {
+        "name": "militaryvehicles:buggy_engine",
+        "attenuation_distance": 32
+      }
+    ]
+  },
+  "carrier_engine": {
+    "subtitle": "subtitles.militaryvehicles.carrier_engine",
+    "sounds": [
+      {
+        "name": "militaryvehicles:carrier_engine",
+        "attenuation_distance": 32
+      }
+    ]
   }
 }

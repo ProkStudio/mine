@@ -3,7 +3,7 @@
   "id": "militaryvehicles",
   "version": "${version}",
   "name": "Military Vehicles",
-  "description": "Standalone military transport. First alpha: a server-controlled 6x6 logistics truck.",
+  "description": "Military transport pack: logistics truck, scout buggy and 8x8 carrier with distinct rigs and shared server-authoritative systems.",
   "authors": [
     "ProkStudio"
   ],

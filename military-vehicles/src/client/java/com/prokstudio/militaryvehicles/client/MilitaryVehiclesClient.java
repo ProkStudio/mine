@@ -13,7 +13,8 @@ import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
 public final class MilitaryVehiclesClient implements ClientModInitializer {
     @Override public void onInitializeClient() {
-        EntityRendererRegistry.register(MilitaryContent.TRUCK_ENTITY,TruckRenderer::new);
+        for(var kind:com.prokstudio.militaryvehicles.core.VehicleKind.values())
+            EntityRendererRegistry.register(MilitaryContent.vehicleEntity(kind),context->new TruckRenderer(context,kind));
         ClientTickEvents.END_CLIENT_TICK.register(TruckAudio::tick);
         var category=KeyBinding.Category.create(MilitaryContent.id("controls"));
         KeyBinding engine=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.militaryvehicles.engine",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_G,category));

@@ -1,5 +1,5 @@
 package com.prokstudio.militaryvehicles.client;
-import com.prokstudio.militaryvehicles.core.TruckGeometry;
+import com.prokstudio.militaryvehicles.core.*;
 import com.prokstudio.militaryvehicles.entity.TruckEntity;
 import com.prokstudio.militaryvehicles.init.MilitaryContent;
 import net.minecraft.client.model.*;
@@ -13,14 +13,15 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.RotationAxis;
 import java.util.*;
-/** Cached immutable meshes; animation values belong to one entity, not global state. */
+/** One cached rig per registered type; animation state belongs to the rendered entity. */
 public final class TruckRenderer extends EntityRenderer<TruckEntity,TruckRenderer.State> {
     public static final class State extends EntityRenderState { public float yaw,wheel,steer; }
     private record Mesh(TruckGeometry.Part definition,ModelPart part,Identifier texture) {}
     private final List<Mesh> meshes=new ArrayList<>();
-    public TruckRenderer(EntityRendererFactory.Context context) {
-        super(context);shadowRadius=1.6f;
-        for(var definition:TruckGeometry.create()) {
+    public TruckRenderer(EntityRendererFactory.Context context) { this(context,VehicleKind.TRUCK); }
+    public TruckRenderer(EntityRendererFactory.Context context,VehicleKind kind) {
+        super(context);shadowRadius=kind.width*.31f;
+        for(var definition:VehicleGeometry.create(kind)) {
             ModelData data=new ModelData();ModelPartBuilder builder=ModelPartBuilder.create();
             for(var b:definition.boxes()) builder.uv(0,0).cuboid(b.x(),b.y(),b.z(),b.w(),b.h(),b.d());
             data.getRoot().addChild("mesh",builder,ModelTransform.origin(0,0,0));

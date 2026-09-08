@@ -15,7 +15,7 @@ final class TruckEngineSound extends MovingSoundInstance {
     private boolean requested = true, finished;
 
     TruckEngineSound(TruckEntity truck) {
-        super(MilitarySounds.TRUCK_ENGINE, SoundCategory.NEUTRAL, SoundInstance.createRandom());
+        super(MilitarySounds.forKind(truck.kind()), SoundCategory.NEUTRAL, SoundInstance.createRandom());
         this.truck = truck;
         repeat = true; repeatDelay = 0; relative = false;
         volume = .001f; pitch = .78f;
@@ -36,7 +36,7 @@ final class TruckEngineSound extends MovingSoundInstance {
                 || truck.isSilent() || !world.hasEntity(truck)) { stopNow(); return; }
         x = truck.getX(); y = truck.getY() + .9; z = truck.getZ();
         boolean powered = requested && truck.engineRunning() && truck.fuel() > 0 && truck.condition() > 0;
-        var frame = envelope.update(powered, truck.engineLoad(), truck.observedSpeed());
+        var frame = envelope.update(truck.kind(),powered,truck.engineLoad(),truck.observedSpeed());
         volume = frame.volume(); pitch = frame.pitch();
         if (!powered && volume == 0) stopNow();
     }
