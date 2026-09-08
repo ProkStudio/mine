@@ -24,15 +24,23 @@ public final class VehicleOperations {
         return kind.armed()?seat==1:kind.support()&&seat==0;
     }
     public static boolean parked(double speedSquared) { return Double.isFinite(speedSquared)&&speedSquared>=0&&speedSquared<=.000025; }
-    public static int transfer(int source,int target,int capacity) {
-        if(source<0||source>VehicleKind.TANKER.tank||target<0||capacity<=0||target>capacity) return 0;
-        return Math.min(TRANSFER_LIMIT,Math.min(Math.max(0,source-FUEL_RESERVE),capacity-target));
+    public static int transfer(int source,int target,int capacity) { return transfer(FleetTuning.DEFAULT,source,target,capacity); }
+    public static int transfer(FleetTuning settings,int source,int target,int capacity) {
+        if(!settings.supportEnabled()||source<0||source>VehicleKind.TANKER.tank||target<0||capacity<=0||target>capacity) return 0;
+        return Math.min(settings.transferLimit(),Math.min(Math.max(0,source-settings.fuelReserve()),capacity-target));
     }
-    public static int repair(int current,int capacity,int kits) {
-        if(current<0||capacity<=0||current>=capacity||kits<=0) return 0;
-        return Math.min(100,capacity-current);
+    public static int repair(int current,int capacity,int kits) { return repair(FleetTuning.DEFAULT,current,capacity,kits); }
+    public static int repair(FleetTuning settings,int current,int capacity,int kits) {
+        if(!settings.supportEnabled()||current<0||capacity<=0||current>=capacity||kits<=0) return 0;
+        return Math.min(settings.workshopRepair(),capacity-current);
     }
-    public static int gunCooldown(VehicleKind kind) { return kind==VehicleKind.HOWITZER?100:60; }
+    public static int gunCooldown(VehicleKind kind) { return gunCooldown(FleetTuning.DEFAULT,kind); }
+    public static int gunCooldown(FleetTuning settings,VehicleKind kind) {
+        return kind==VehicleKind.HOWITZER?settings.howitzerReloadTicks():settings.tankReloadTicks();
+    }
+    public static int restoredCooldown(FleetTuning settings,VehicleKind kind) {
+        return Math.max(100,kind.armed()?gunCooldown(settings,kind):settings.serviceCooldownTicks());
+    }
     public static double gunRange(VehicleKind kind) { return kind==VehicleKind.HOWITZER?64:48; }
     public static float gunDamage(VehicleKind kind) { return kind==VehicleKind.HOWITZER?18:12; }
     public static float minPitch(VehicleKind kind) { return kind==VehicleKind.HOWITZER?-55:-20; }
@@ -46,6 +54,9 @@ public final class VehicleOperations {
         return (float)TruckPhysics.approach(TruckPhysics.clamp(current,minPitch(kind),maxPitch(kind)),TruckPhysics.clamp(target,minPitch(kind),maxPitch(kind)),2);
     }
     public static boolean canFire(VehicleKind kind,int cooldown,int shells,boolean functional,boolean grounded,boolean water,Deployment deployment) {
-        return kind.armed()&&cooldown==0&&shells>0&&functional&&grounded&&!water&&(kind!=VehicleKind.HOWITZER||deployment.ready());
+        return canFire(FleetTuning.DEFAULT,kind,cooldown,shells,functional,grounded,water,deployment);
+    }
+    public static boolean canFire(FleetTuning settings,VehicleKind kind,int cooldown,int shells,boolean functional,boolean grounded,boolean water,Deployment deployment) {
+        return settings.weaponsEnabled()&&kind.armed()&&cooldown==0&&shells>0&&functional&&grounded&&!water&&(kind!=VehicleKind.HOWITZER||deployment.ready());
     }
 }
