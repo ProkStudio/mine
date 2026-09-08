@@ -42,7 +42,7 @@ final class VehicleSystems {
             for(var passenger:vehicle.getPassengerList()) if(passenger instanceof ServerPlayerEntity p&&vehicle.effectiveSeat(p)==1&&!p.isSpectator()&&p.currentScreenHandler==p.playerScreenHandler) {
                 turretYaw=VehicleOperations.aimYaw(turretYaw,TruckPhysics.wrap(p.getYaw()-vehicle.getYaw()));
                 gunPitch=VehicleOperations.aimPitch(vehicle.kind(),gunPitch,p.getPitch());
-                if(vehicle.age%10==0) p.sendMessage(Text.translatable("hud.militaryvehicles.gunner",count(MilitaryContent.VEHICLE_SHELL),cooldown,Text.translatable("message.militaryvehicles."+(deployment.ready()?"deployed":"stowed"))),true);
+                if(vehicle.age%10==0) p.sendMessage(Text.translatable("hud.militaryvehicles.gunner",count(MilitaryContent.VEHICLE_SHELL),cooldown,vehicle.kind()==VehicleKind.HOWITZER?Text.translatable("message.militaryvehicles."+(deployment.ready()?"deployed":"stowed")):Text.literal("PvE")),true);
             }
         }
         vehicle.syncSystems(turretYaw,gunPitch,deployment.ticks(),recoil,cooldown,soloCrew!=null);
