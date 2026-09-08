@@ -10,7 +10,8 @@ class FleetResourceTest {
     private static final Path ROOT=Path.of("build/resources/main/assets/militaryvehicles");
     private JsonObject read(String path) throws Exception {return JsonParser.parseString(Files.readString(ROOT.resolve(path))).getAsJsonObject();}
     @Test void allFiveItemsHaveModernDefinitionsAndDistinctBoundedModels() throws Exception {
-        Set<String> expected=new HashSet<>(Set.of("truck_6x6","scout_buggy","carrier_8x8","fuel_can","repair_kit"));
+        // Historical method name retained; all twelve current item definitions are required.
+        Set<String> expected=new HashSet<>(Set.of("truck_6x6","scout_buggy","carrier_8x8","warden_tank","fuel_tanker","field_workshop","recovery_vehicle","bastion_howitzer","fuel_can","repair_kit","vehicle_frame","vehicle_shell"));
         try(var paths=Files.list(ROOT.resolve("items"))) {assertEquals(expected,new HashSet<>(paths.map(p->p.getFileName().toString().replace(".json","")).toList()));}
         Set<JsonArray> shapes=new HashSet<>();
         for(String id:expected) {
@@ -21,7 +22,7 @@ class FleetResourceTest {
         }
     }
     @Test void fleetManifestMatchesTheRuntimeProfilesAndMeshCounts() throws Exception {
-        var manifest=read("fleet.json");assertEquals(1,manifest.get("schemaVersion").getAsInt());assertEquals(3,manifest.getAsJsonArray("vehicles").size());Set<String> found=new HashSet<>();
+        var manifest=read("fleet.json");assertEquals(1,manifest.get("schemaVersion").getAsInt());assertEquals(8,manifest.getAsJsonArray("vehicles").size());Set<String> found=new HashSet<>();
         for(var value:manifest.getAsJsonArray("vehicles")) {
             var e=value.getAsJsonObject();var k=VehicleKind.require(e.get("id").getAsString());assertTrue(found.add(k.id));
             assertEquals(k.seats.size(),e.get("seats").getAsInt());assertEquals(k.cargoSlots(),e.get("cargoSlots").getAsInt());assertEquals(k.tank,e.get("tank").getAsInt());assertEquals(k.condition,e.get("condition").getAsInt());

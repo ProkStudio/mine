@@ -36,7 +36,7 @@ public final class VehicleOperations {
     public static double gunRange(VehicleKind kind) { return kind==VehicleKind.HOWITZER?64:48; }
     public static float gunDamage(VehicleKind kind) { return kind==VehicleKind.HOWITZER?18:12; }
     public static float minPitch(VehicleKind kind) { return kind==VehicleKind.HOWITZER?-55:-20; }
-    public static float maxPitch(VehicleKind kind) { return kind==VehicleKind.HOWITZER?0:12; }
+    public static float maxPitch(VehicleKind kind) { return kind==VehicleKind.HOWITZER?8:12; }
     public static float aimYaw(float current,float target) {
         if(!Float.isFinite(current)||!Float.isFinite(target)) return 0;
         return TruckPhysics.wrap(current+(float)TruckPhysics.clamp(TruckPhysics.wrap(target-current),-3,3));

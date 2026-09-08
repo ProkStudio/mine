@@ -6,8 +6,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class FleetProfileTest {
     @Test void stableIdsAndCapacitiesCoverThreeDistinctRoles() {
-        assertEquals(Set.of("truck_6x6","scout_buggy","carrier_8x8"),new HashSet<>(Arrays.stream(VehicleKind.values()).map(k->k.id).toList()));
-        assertEquals(3,Arrays.stream(VehicleKind.values()).map(k->k.soundId).distinct().count());
+        // Historical method name retained; exact registry coverage now includes all eight roles.
+        assertEquals(Set.of("truck_6x6","scout_buggy","carrier_8x8","warden_tank","fuel_tanker","field_workshop","recovery_vehicle","bastion_howitzer"),new HashSet<>(Arrays.stream(VehicleKind.values()).map(k->k.id).toList()));
+        assertEquals(5,Arrays.stream(VehicleKind.values()).map(k->k.soundId).distinct().count());
         assertEquals(2,VehicleKind.TRUCK.seats.size());assertEquals(2,VehicleKind.BUGGY.seats.size());assertEquals(6,VehicleKind.CARRIER.seats.size());
         assertEquals(27,VehicleKind.TRUCK.cargoSlots());assertEquals(9,VehicleKind.BUGGY.cargoSlots());assertEquals(18,VehicleKind.CARRIER.cargoSlots());
         assertEquals(1200,VehicleKind.BUGGY.tank);assertEquals(3200,VehicleKind.CARRIER.tank);
