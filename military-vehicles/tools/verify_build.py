@@ -22,6 +22,8 @@ expected = {
 'ExpansionGeometryTest': {'saveProfilesPreserveFleetAndRejectCrossType','newRigsHaveOwnMissionHardware','animatedTrackedAndServiceRigsFitCollision','newProfilesHaveExpectedCapacitiesAndDriveFamilies'},
 'ExpansionResourceTest': {'everyVehicleAndSupplyHasOneBoundedSurvivalRecipe','craftingNeverConsumesPackedVehiclesOrDuplicatesCans','recipeBookUnlockCoversExactCraftingSet','localizedRoleHelpAndRemappableKeysCoverTheFleet','generatedRoleFlagsMatchProductionProfiles'}}
 
+expected['FleetTuningTest'] = {'defaultsPreserveLegacyEconomy', 'partialFilesInheritDocumentedDefaults', 'rejectsUnknownAndDuplicateKeys', 'rejectsUnsupportedSchemaAndMalformedValues', 'integerBoundsCannotBeBypassed', 'canonicalRoundTripIsDeterministic', 'createsMissingFileWithoutOverwritingExistingEdits', 'invalidReloadKeepsLastGoodSnapshot', 'boundsBytesAndRejectsMalformedUtf8', 'separateStoresDoNotLeakServerState', 'configuredTransfersConserveFuelAndReserve', 'configuredRepairsRequireKitsAndRespectCapacity', 'weaponDisableAndReloadLimitsApply', 'supportDisableStopsAccounting', 'engineDebitCannotUnderflow', 'restoringCannotShortenConfiguredCooldown', 'firstPhysicalHitBlocksTargetsBehindIt', 'raySelectionIsOrderIndependentAndFinite', 'serviceTargetsMustBeGroundedDryAndStationary'}
+
 report = root/'build/verification.json'
 report.unlink(missing_ok=True)
 seen = {k: set() for k in expected}
@@ -45,7 +47,7 @@ with zipfile.ZipFile(jar) as a:
     m = json.loads(a.read('fabric.mod.json'))
     assert m['version'] == version and m['id'] == 'militaryvehicles'
     assert m['depends']['minecraft'] == '=1.21.11' and m['depends']['fabricloader'] == '>=0.19.5'
-    for clazz in ['entity/TruckEntity', 'entity/TruckExhaust', 'client/TruckRenderer', 'client/TruckAudio', 'client/TruckEngineSound', 'core/EngineFeedback', 'core/TruckFeedback', 'core/VehicleKind', 'core/VehicleGeometry', 'core/VehicleSaveCodec', 'entity/CargoScreenHandler', 'init/MilitarySounds','core/TrackDrive','core/VehicleOperations','core/ExpansionGeometry','entity/VehicleSystems','network/VehicleAction']:
+    for clazz in ['entity/TruckEntity', 'entity/TruckExhaust', 'client/TruckRenderer', 'client/TruckAudio', 'client/TruckEngineSound', 'core/EngineFeedback', 'core/TruckFeedback', 'core/VehicleKind', 'core/VehicleGeometry', 'core/VehicleSaveCodec', 'entity/CargoScreenHandler', 'init/MilitarySounds','core/TrackDrive','core/VehicleOperations','core/ExpansionGeometry','entity/VehicleSystems','network/VehicleAction','core/FleetTuning','core/ServiceTargeting','config/FleetConfigFile','config/ServerFleetConfig','network/FleetSettingsPayload','client/ClientFleetSettings']:
         assert f'com/prokstudio/militaryvehicles/{clazz}.class' in names, clazz
     assert b'net/minecraft/class_' in a.read('com/prokstudio/militaryvehicles/entity/TruckEntity.class'), 'Expected intermediary-remapped entity class'
     assert not any(n.startswith(('com/harvester/', 'ws/schild/')) or n.endswith(('.exe','.dll','.so','.dylib','.wav','.pcm')) for n in names)
@@ -73,6 +75,10 @@ with zipfile.ZipFile(jar) as a:
     ru = json.loads(a.read('assets/militaryvehicles/lang/ru_ru.json'))
     en = json.loads(a.read('assets/militaryvehicles/lang/en_us.json'))
     assert ru.keys() == en.keys() and all(ru[k].count('%s') == en[k].count('%s') for k in ru)
+    for key in ['system_disabled','config_failed','config_reloaded','enabled','disabled']:
+        assert 'message.militaryvehicles.'+key in en
+    for key in ['rules_pending','server_rules','server_gun','server_tanker','server_workshop','server_recovery']:
+        assert 'help.militaryvehicles.'+key in en
     base = 'assets/militaryvehicles/'
     sounds = json.loads(a.read(base+'sounds.json'))
     expected_sounds = {'truck_engine','buggy_engine','carrier_engine','tank_engine','artillery_engine'}
@@ -121,6 +127,6 @@ with zipfile.ZipFile(jar) as a:
     book=json.loads(a.read('data/militaryvehicles/advancement/recipes/field_manual.json'))
     assert set(book['rewards']['recipes'])=={'militaryvehicles:'+r for r in expected_recipes}
     assert b'CC0-1.0' in a.read(base+'sounds/LICENSE.txt')
-result = {'status':'PASS','junit_cases':cases,'jar':jar.name,'bytes':jar.stat().st_size,'sha256':hashlib.sha256(jar.read_bytes()).hexdigest(),'audio':audio,'fleet':fleet,'recipes':len(expected_recipes),'minecraft_runtime_tested':False}
+result = {'status':'PASS','junit_cases':cases,'jar':jar.name,'bytes':jar.stat().st_size,'sha256':hashlib.sha256(jar.read_bytes()).hexdigest(),'audio':audio,'fleet':fleet,'recipes':len(expected_recipes),'minecraft_runtime_tested':False,'server_rules_schema':1}
 report.write_text(json.dumps(result,indent=2)+'\n',encoding='utf-8')
 print(json.dumps(result,indent=2))
