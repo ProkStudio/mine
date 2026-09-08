@@ -1,0 +1,6 @@
+{
+  "truck_engine": {
+    "subtitle": "message.militaryvehicles.running",
+    "sounds": [{"name": "militaryvehicles:truck_engine", "attenuation_distance": 32}]
+  }
+}

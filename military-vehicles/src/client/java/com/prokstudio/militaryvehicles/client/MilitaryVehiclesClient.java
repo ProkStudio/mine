@@ -14,6 +14,7 @@ import org.lwjgl.glfw.GLFW;
 public final class MilitaryVehiclesClient implements ClientModInitializer {
     @Override public void onInitializeClient() {
         EntityRendererRegistry.register(MilitaryContent.TRUCK_ENTITY,TruckRenderer::new);
+        ClientTickEvents.END_CLIENT_TICK.register(TruckAudio::tick);
         var category=KeyBinding.Category.create(MilitaryContent.id("controls"));
         KeyBinding engine=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.militaryvehicles.engine",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_G,category));
         ClientTickEvents.END_CLIENT_TICK.register(client->{

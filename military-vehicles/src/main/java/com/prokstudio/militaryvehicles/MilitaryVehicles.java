@@ -12,6 +12,7 @@ public final class MilitaryVehicles implements ModInitializer {
     public static final Logger LOGGER=LoggerFactory.getLogger(ID);
     @Override public void onInitialize() {
         MilitaryContent.register();
+        com.prokstudio.militaryvehicles.init.MilitarySounds.register();
         PayloadTypeRegistry.playC2S().register(TruckInput.ID,TruckInput.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(TruckInput.ID,(payload,context)->{
             var player=context.player();

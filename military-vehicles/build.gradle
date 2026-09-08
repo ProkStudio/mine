@@ -55,3 +55,12 @@ tasks.register('coreSmoke', JavaExec) {
 }
 check.dependsOn coreSmoke
 jar { from('../LICENSE') { rename { 'LICENSE_military-vehicles' } } }
+
+tasks.register('feedbackSmoke', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.prokstudio.militaryvehicles.FeedbackSmoke'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+}
+check.dependsOn feedbackSmoke
+apply from: 'audio.gradle'

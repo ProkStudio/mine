@@ -30,6 +30,8 @@ public final class TruckEntity extends Entity {
     private static final TrackedData<Integer> CONDITION=DataTracker.registerData(TruckEntity.class,TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Boolean> ENGINE=DataTracker.registerData(TruckEntity.class,TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Byte> STEER=DataTracker.registerData(TruckEntity.class,TrackedDataHandlerRegistry.BYTE);
+    private static final TrackedData<Byte> ENGINE_LOAD=DataTracker.registerData(TruckEntity.class,TrackedDataHandlerRegistry.BYTE);
+    private double observedSpeed;
     private final PositionInterpolator interpolator=new PositionInterpolator(this,3);
     private final ControlLatch controls=new ControlLatch();
     private final Set<ServerPlayerEntity> viewers=new HashSet<>();
@@ -49,7 +51,7 @@ public final class TruckEntity extends Entity {
             @Override public void onClose(ContainerUser user) { if(user.asLivingEntity() instanceof ServerPlayerEntity p) viewers.remove(p); }
         };
     }
-    @Override protected void initDataTracker(DataTracker.Builder b) { b.add(FUEL,0);b.add(CONDITION,TruckSpec.CONDITION);b.add(ENGINE,false);b.add(STEER,(byte)0); }
+    @Override protected void initDataTracker(DataTracker.Builder b) { b.add(FUEL,0);b.add(CONDITION,TruckSpec.CONDITION);b.add(ENGINE,false);b.add(STEER,(byte)0);b.add(ENGINE_LOAD,(byte)0); }
     @Override public PositionInterpolator getInterpolator() { return interpolator; }
     @Override public LivingEntity getControllingPassenger() { return null; }
     @Override public boolean isPushable() { return false; }
@@ -85,16 +87,19 @@ public final class TruckEntity extends Entity {
         controls.accept(getEntityWorld().getTime(),keys);
     }
     private void stopControls() { controls.reset();driverId=null;setEngine(false);dataTracker.set(STEER,(byte)0); }
-    private void setEngine(boolean enabled) { dataTracker.set(ENGINE,enabled); }
+    private void setEngine(boolean enabled) { dataTracker.set(ENGINE,enabled);if(!enabled) dataTracker.set(ENGINE_LOAD,(byte)0); }
     public int fuel() { return dataTracker.get(FUEL); }
     public int condition() { return dataTracker.get(CONDITION); }
     public boolean engineRunning() { return dataTracker.get(ENGINE); }
+    public float engineLoad() { return Math.clamp(dataTracker.get(ENGINE_LOAD)/100f,0,1); }
+    public double observedSpeed() { return observedSpeed; }
     public float wheelAngle(float delta) { return previousWheelAngle+(wheelAngle-previousWheelAngle)*delta; }
     public float steerAngle() { return steerAngle; }
     @Override public void tick() {
         super.tick();
         if(getEntityWorld().isClient()) {
             double x=getX(),z=getZ();interpolator.tick();
+            observedSpeed=TruckFeedback.observedSpeed(getX()-x,getZ()-z);
             double travel=TruckPhysics.signedSpeed(getX()-x,getZ()-z,getYaw());previousWheelAngle=wheelAngle;
             if(Math.abs(travel)<2) wheelAngle+=(float)(travel/(5.5/16));
             if(Math.abs(wheelAngle)>Math.PI*200) { float shift=(float)(Math.PI*200)*Math.signum(wheelAngle);wheelAngle-=shift;previousWheelAngle-=shift; }
@@ -110,6 +115,7 @@ public final class TruckEntity extends Entity {
         if(authorized&&controls.consumeToggle(now)) setEngine(!engineRunning());
         if(fuel()==0||condition()==0||isTouchingWater()||quarantinedState!=null) setEngine(false);
         int keys=authorized?controls.keys(now):ControlLatch.BRAKE;
+        dataTracker.set(ENGINE_LOAD,TruckFeedback.driveLoad(keys,engineRunning(),isOnGround()));
         double speed=TruckPhysics.signedSpeed(getVelocity().x,getVelocity().z,getYaw());
         var motion=TruckPhysics.step(speed,getYaw(),keys,engineRunning(),isOnGround(),1);
         setYaw(motion.yaw());dataTracker.set(STEER,(byte)Math.round(motion.steer()/.48f*100));
@@ -118,6 +124,7 @@ public final class TruckEntity extends Entity {
         if(!destinationLoaded(proposed)) { proposed=Vec3d.ZERO;stopControls(); }
         setVelocity(proposed);move(MovementType.SELF,proposed);
         if(engineRunning()) { fuelTicks++;if(fuelTicks>=10) { fuelTicks-=10;dataTracker.set(FUEL,Math.max(0,fuel()-1)); }if(fuel()==0) setEngine(false); }
+        TruckExhaust.tick(this,(ServerWorld)getEntityWorld());
         if(driver!=null&&age%10==0) dashboard(driver);
     }
     private boolean destinationLoaded(Vec3d delta) {
