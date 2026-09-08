@@ -31,18 +31,25 @@ public final class TruckEntity extends Entity {
     private static final TrackedData<Boolean> ENGINE=DataTracker.registerData(TruckEntity.class,TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Byte> STEER=DataTracker.registerData(TruckEntity.class,TrackedDataHandlerRegistry.BYTE);
     private static final TrackedData<Byte> ENGINE_LOAD=DataTracker.registerData(TruckEntity.class,TrackedDataHandlerRegistry.BYTE);
+    private static final TrackedData<Integer> TURRET=DataTracker.registerData(TruckEntity.class,TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Integer> GUN_PITCH=DataTracker.registerData(TruckEntity.class,TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Integer> DEPLOYMENT=DataTracker.registerData(TruckEntity.class,TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Integer> RECOIL=DataTracker.registerData(TruckEntity.class,TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Boolean> SOLO_GUNNER=DataTracker.registerData(TruckEntity.class,TrackedDataHandlerRegistry.BOOLEAN);
     private double observedSpeed;
     private final PositionInterpolator interpolator=new PositionInterpolator(this,3);
     private final ControlLatch controls=new ControlLatch();
     private final Set<ServerPlayerEntity> viewers=new HashSet<>();
     private final SimpleInventory cargo;
     private final VehicleKind kind;
+    private final VehicleSystems systems=new VehicleSystems(this);
     private UUID driverId;
     private int fuelTicks,damageCooldown;
     private boolean packed;
     // Preserve unsupported blobs instead of silently replacing cargo with defaults.
     private NbtCompound quarantinedState;
-    private float wheelAngle,previousWheelAngle,steerAngle;
+    private float wheelAngle,previousWheelAngle,steerAngle,visualTurret,previousTurret,visualPitch,previousPitch;
+    private double leftTrack,rightTrack,previousLeftTrack,previousRightTrack;
     public TruckEntity(EntityType<? extends TruckEntity> type,World world) { this(type,world,VehicleKind.TRUCK); }
     public TruckEntity(EntityType<? extends TruckEntity> type,World world,VehicleKind kind) {
         super(type,world);this.kind=Objects.requireNonNull(kind);intersectionChecked=true;
@@ -54,7 +61,10 @@ public final class TruckEntity extends Entity {
             @Override public void onClose(ContainerUser user) { if(user.asLivingEntity() instanceof ServerPlayerEntity p) viewers.remove(p); }
         };
     }
-    @Override protected void initDataTracker(DataTracker.Builder b) { b.add(FUEL,0);b.add(CONDITION,TruckSpec.CONDITION);b.add(ENGINE,false);b.add(STEER,(byte)0);b.add(ENGINE_LOAD,(byte)0); }
+    @Override protected void initDataTracker(DataTracker.Builder b) {
+        b.add(FUEL,0);b.add(CONDITION,TruckSpec.CONDITION);b.add(ENGINE,false);b.add(STEER,(byte)0);b.add(ENGINE_LOAD,(byte)0);
+        b.add(TURRET,0);b.add(GUN_PITCH,0);b.add(DEPLOYMENT,0);b.add(RECOIL,0);b.add(SOLO_GUNNER,false);
+    }
     @Override public PositionInterpolator getInterpolator() { return interpolator; }
     @Override public LivingEntity getControllingPassenger() { return null; }
     @Override public boolean isPushable() { return false; }
@@ -62,10 +72,12 @@ public final class TruckEntity extends Entity {
     @Override public boolean isAttackable() { return !isRemoved(); }
     @Override public float getStepHeight() { return .6f; }
     @Override protected boolean canAddPassenger(Entity passenger) {
-        return passenger instanceof PlayerEntity p&&!p.isSpectator()&&quarantinedState==null&&getPassengerList().size()<kind.seats.size();
+        return passenger instanceof PlayerEntity p&&!p.isSpectator()&&quarantinedState==null&&!soloGunner()&&getPassengerList().size()<kind.seats.size();
     }
+    public boolean soloGunner() {return dataTracker.get(SOLO_GUNNER);}
+    public int effectiveSeat(Entity p) {int index=getPassengerList().indexOf(p);return index==0&&soloGunner()?1:index;}
     @Override protected Vec3d getPassengerAttachmentPos(Entity p,EntityDimensions dimensions,float scale) {
-        int index=Math.clamp(getPassengerList().indexOf(p),0,kind.seats.size()-1);var seat=kind.seats.get(index);
+        int index=Math.clamp(effectiveSeat(p),0,kind.seats.size()-1);var seat=kind.seats.get(index);
         double hip=.75*(p instanceof LivingEntity living?living.getScale():1);
         return new Vec3d(seat.x()/16.0,seat.topY()/16.0-hip,seat.z()/16.0).rotateY((float)-Math.toRadians(getYaw())).add(p.getVehicleAttachmentPos(this));
     }
@@ -84,12 +96,14 @@ public final class TruckEntity extends Entity {
         return super.updatePassengerForDismount(p);
     }
     public void acceptInput(ServerPlayerEntity player,int keys) {
-        if(player!=getFirstPassenger()||player.isSpectator()||packed||isRemoved()||quarantinedState!=null) return;
+        if(player!=getFirstPassenger()||soloGunner()||player.isSpectator()||packed||isRemoved()||quarantinedState!=null) return;
         if(player.currentScreenHandler!=player.playerScreenHandler) { stopControls();return; }
         if(!player.getUuid().equals(driverId)) { stopControls();driverId=player.getUuid(); }
         controls.accept(getEntityWorld().getTime(),keys);
     }
+    public void acceptAction(ServerPlayerEntity player,int action) {systems.accept(player,action);}
     private void stopControls() { controls.reset();driverId=null;setEngine(false);dataTracker.set(STEER,(byte)0); }
+    void clearDriverControls() {stopControls();}
     private void setEngine(boolean enabled) { dataTracker.set(ENGINE,enabled);if(!enabled) dataTracker.set(ENGINE_LOAD,(byte)0); }
     public VehicleKind kind() { return kind; }
     public int fuel() { return dataTracker.get(FUEL); }
@@ -99,19 +113,46 @@ public final class TruckEntity extends Entity {
     public double observedSpeed() { return observedSpeed; }
     public float wheelAngle(float delta) { return previousWheelAngle+(wheelAngle-previousWheelAngle)*delta; }
     public float steerAngle() { return steerAngle; }
+    public double trackAngle(boolean left,float delta) {return left?previousLeftTrack+(leftTrack-previousLeftTrack)*delta:previousRightTrack+(rightTrack-previousRightTrack)*delta;}
+    public float turretYaw(float delta) {return TruckPhysics.wrap(previousTurret+TruckPhysics.wrap(visualTurret-previousTurret)*delta);}
+    public float gunPitch(float delta) {return previousPitch+(visualPitch-previousPitch)*delta;}
+    public float deployment() {return dataTracker.get(DEPLOYMENT)/(float)VehicleOperations.DEPLOY_TICKS;}
+    public float recoil() {return dataTracker.get(RECOIL)/8f;}
+    boolean operationReady() {return !packed&&!isRemoved()&&quarantinedState==null;}
+    SimpleInventory operationCargo() {return cargo;}
+    boolean systemsLocked() {return systems.locked();}
+    void changeFuel(int delta) {
+        long next=(long)fuel()+delta;if(next<0||next>kind.tank) throw new IllegalArgumentException("Fuel transaction out of bounds");
+        dataTracker.set(FUEL,(int)next);if(next==0) setEngine(false);
+    }
+    void repairCondition(int amount) {if(amount<=0||amount>kind.condition-condition()) throw new IllegalArgumentException("Repair out of bounds");dataTracker.set(CONDITION,condition()+amount);}
+    void syncSystems(float yaw,float pitch,int deployment,int recoil,int cooldown,boolean solo) {
+        dataTracker.set(TURRET,Math.round(yaw*100));dataTracker.set(GUN_PITCH,Math.round(pitch*100));
+        dataTracker.set(DEPLOYMENT,deployment);dataTracker.set(RECOIL,recoil);dataTracker.set(SOLO_GUNNER,solo);
+    }
     @Override public void tick() {
         super.tick();
         if(getEntityWorld().isClient()) {
-            double x=getX(),z=getZ();interpolator.tick();
+            double x=getX(),z=getZ();float oldYaw=getYaw();interpolator.tick();
             observedSpeed=TruckFeedback.observedSpeed(getX()-x,getZ()-z);
             double travel=TruckPhysics.signedSpeed(getX()-x,getZ()-z,getYaw());previousWheelAngle=wheelAngle;
+            previousLeftTrack=leftTrack;previousRightTrack=rightTrack;
+            previousTurret=visualTurret;previousPitch=visualPitch;
+            visualTurret=TruckPhysics.wrap(visualTurret+TruckPhysics.wrap(dataTracker.get(TURRET)/100f-visualTurret)*.45f);
+            visualPitch+=(dataTracker.get(GUN_PITCH)/100f-visualPitch)*.45f;
             if(Math.abs(travel)<2) wheelAngle+=(float)(travel/(kind.wheelRadius/16));
+            float yawDelta=TruckPhysics.wrap(getYaw()-oldYaw);
+            if(kind.tracked()&&Math.abs(travel)<2&&Math.abs(yawDelta)<45) {
+                double turn=Math.toRadians(yawDelta)*TrackDrive.TRACK_SPAN*.5;
+                leftTrack+=(travel+turn)/(kind.wheelRadius/16);rightTrack+=(travel-turn)/(kind.wheelRadius/16);
+            }
             if(Math.abs(wheelAngle)>Math.PI*200) { float shift=(float)(Math.PI*200)*Math.signum(wheelAngle);wheelAngle-=shift;previousWheelAngle-=shift; }
             steerAngle+=(dataTracker.get(STEER)/100f*kind.handling.steer()-steerAngle)*.35f;return;
         }
         if(packed||isRemoved()) return;
+        systems.tick();
         if(damageCooldown>0) damageCooldown--;
-        PlayerEntity driver=getFirstPassenger() instanceof PlayerEntity p&&!p.isSpectator()?p:null;
+        PlayerEntity driver=!soloGunner()&&getFirstPassenger() instanceof PlayerEntity p&&!p.isSpectator()?p:null;
         long now=getEntityWorld().getTime();
         boolean authorized=driver!=null&&driver.getUuid().equals(driverId)&&controls.fresh(now)
             &&(!(driver instanceof ServerPlayerEntity s)||s.currentScreenHandler==s.playerScreenHandler);
@@ -119,10 +160,12 @@ public final class TruckEntity extends Entity {
         if(authorized&&controls.consumeToggle(now)) setEngine(!engineRunning());
         if(fuel()==0||condition()==0||isTouchingWater()||quarantinedState!=null) setEngine(false);
         int keys=authorized?controls.keys(now):ControlLatch.BRAKE;
-        dataTracker.set(ENGINE_LOAD,TruckFeedback.driveLoad(keys,engineRunning(),isOnGround()));
+        byte load=TruckFeedback.driveLoad(keys,engineRunning(),isOnGround());
+        if(kind.tracked()&&engineRunning()&&isOnGround()&&(keys&(ControlLatch.LEFT|ControlLatch.RIGHT))!=0&&(keys&ControlLatch.BRAKE)==0) load=80;
+        dataTracker.set(ENGINE_LOAD,load);
         double speed=TruckPhysics.signedSpeed(getVelocity().x,getVelocity().z,getYaw());
-        var motion=TruckPhysics.step(kind,speed,getYaw(),keys,engineRunning(),isOnGround(),1);
-        setYaw(motion.yaw());dataTracker.set(STEER,(byte)Math.round(motion.steer()/kind.handling.steer()*100));
+        var motion=systems.move(speed,getYaw(),keys,engineRunning(),isOnGround());
+        setYaw(motion.yaw());dataTracker.set(STEER,(byte)Math.round(TruckPhysics.clamp(motion.steer()/kind.handling.steer(),-1,1)*100));
         double angle=Math.toRadians(getYaw());
         Vec3d proposed=new Vec3d(-Math.sin(angle)*motion.speed(),Math.max(-1.2,getVelocity().y-.04),Math.cos(angle)*motion.speed());
         if(!destinationLoaded(proposed)) { proposed=Vec3d.ZERO;stopControls(); }
@@ -157,7 +200,9 @@ public final class TruckEntity extends Entity {
         }
         if(held.isOf(Items.CHEST)) { openCargo(player);return ActionResult.SUCCESS; }
         if(player.startRiding(this)) {
-            player.sendMessage(Text.translatable("message.militaryvehicles.controls",Text.keybind("key.militaryvehicles.engine"),Text.keybind("key.sneak")),false);return ActionResult.SUCCESS;
+            player.sendMessage(Text.translatable("message.militaryvehicles.controls",Text.keybind("key.militaryvehicles.engine"),Text.keybind("key.sneak")),false);
+            if(kind.armed()||kind.support()) player.sendMessage(Text.translatable("message.militaryvehicles.role_controls",Text.keybind("key.militaryvehicles.action"),Text.keybind("key.militaryvehicles.deploy"),Text.keybind("key.militaryvehicles.crew"),Text.keybind("key.militaryvehicles.help")),false);
+            return ActionResult.SUCCESS;
         }
         message(player,"seats_full");return ActionResult.FAIL;
     }
@@ -183,7 +228,7 @@ public final class TruckEntity extends Entity {
         for(ItemStack stack:state.cargo()) if(!stack.isEmpty()&&!stack.getItem().canBeNested()) throw new IllegalArgumentException("Nested vehicle/container in cargo");
         dataTracker.set(FUEL,state.fuel());dataTracker.set(CONDITION,state.condition());fuelTicks=state.fuelTicks();
         for(int i=0;i<cargo.size();i++) cargo.setStack(i,state.cargo().get(i).copy());
-        quarantinedState=null;stopControls();setVelocity(Vec3d.ZERO);
+        quarantinedState=null;stopControls();setVelocity(Vec3d.ZERO);systems.reset();
     }
     public ItemStack packedItem() {
         var ops=getRegistryManager().getOps(NbtOps.INSTANCE);NbtCompound data=new NbtCompound();
@@ -192,7 +237,7 @@ public final class TruckEntity extends Entity {
         if(getCustomName()!=null) item.set(DataComponentTypes.CUSTOM_NAME,getCustomName());return item;
     }
     private boolean pickup(PlayerEntity player) {
-        if(hasPassengers()||getVelocity().horizontalLengthSquared()>.000225) { message(player,"park_first");return false; }
+        if(hasPassengers()||systems.locked()||getVelocity().horizontalLengthSquared()>.000225) { message(player,"park_first");return false; }
         if(player.getInventory().getEmptySlot()<0) { message(player,"inventory_full");return false; }
         final ItemStack item;
         try { item=packedItem(); }catch(RuntimeException ex) { MilitaryVehicles.LOGGER.error("Truck packing failed; original retained",ex);message(player,"invalid_state");return false; }
@@ -220,6 +265,6 @@ public final class TruckEntity extends Entity {
             try { restore(SAVE_CODEC.parse(getRegistryManager().getOps(NbtOps.INSTANCE),saved.get()).getOrThrow()); }
             catch(RuntimeException ex) { quarantinedState=saved.get().copy();MilitaryVehicles.LOGGER.error("Unsupported truck save; inert entity retains raw state",ex); }
         }
-        packed=false;damageCooldown=0;stopControls();
+        packed=false;damageCooldown=0;stopControls();systems.reset();
     }
 }

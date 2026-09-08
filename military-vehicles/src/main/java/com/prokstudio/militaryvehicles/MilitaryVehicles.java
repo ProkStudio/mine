@@ -2,6 +2,7 @@ package com.prokstudio.militaryvehicles;
 import com.prokstudio.militaryvehicles.entity.TruckEntity;
 import com.prokstudio.militaryvehicles.init.MilitaryContent;
 import com.prokstudio.militaryvehicles.network.TruckInput;
+import com.prokstudio.militaryvehicles.network.VehicleAction;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -17,6 +18,11 @@ public final class MilitaryVehicles implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(TruckInput.ID,(payload,context)->{
             var player=context.player();
             if(player.getVehicle() instanceof TruckEntity truck&&truck.getId()==payload.entityId()) truck.acceptInput(player,Byte.toUnsignedInt(payload.keys()));
+        });
+        PayloadTypeRegistry.playC2S().register(VehicleAction.ID,VehicleAction.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(VehicleAction.ID,(payload,context)->{
+            var player=context.player();
+            if(player.getVehicle() instanceof TruckEntity truck&&truck.getId()==payload.entityId()) truck.acceptAction(player,Byte.toUnsignedInt(payload.action()));
         });
     }
 }
