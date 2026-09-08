@@ -23,7 +23,7 @@ import net.minecraft.util.*;
 import net.minecraft.util.math.*;
 import net.minecraft.world.World;
 import java.util.*;
-/** Non-living truck. Only the server moves it, changes cargo or consumes supplies. */
+/** Shared non-living ground vehicle; historical class name retained. Registry fixes the immutable kind. */
 public final class TruckEntity extends Entity {
     public static final Codec<VehicleSave<ItemStack>> SAVE_CODEC=VehicleSaveCodec.create(ItemStack.OPTIONAL_CODEC);
     private static final TrackedData<Integer> FUEL=DataTracker.registerData(TruckEntity.class,TrackedDataHandlerRegistry.INTEGER);
@@ -36,15 +36,18 @@ public final class TruckEntity extends Entity {
     private final ControlLatch controls=new ControlLatch();
     private final Set<ServerPlayerEntity> viewers=new HashSet<>();
     private final SimpleInventory cargo;
+    private final VehicleKind kind;
     private UUID driverId;
     private int fuelTicks,damageCooldown;
     private boolean packed;
     // Preserve unsupported blobs instead of silently replacing cargo with defaults.
     private NbtCompound quarantinedState;
     private float wheelAngle,previousWheelAngle,steerAngle;
-    public TruckEntity(EntityType<? extends TruckEntity> type,World world) {
-        super(type,world);intersectionChecked=true;
-        cargo=new SimpleInventory(TruckSpec.SLOTS) {
+    public TruckEntity(EntityType<? extends TruckEntity> type,World world) { this(type,world,VehicleKind.TRUCK); }
+    public TruckEntity(EntityType<? extends TruckEntity> type,World world,VehicleKind kind) {
+        super(type,world);this.kind=Objects.requireNonNull(kind);intersectionChecked=true;
+        dataTracker.set(CONDITION,kind.condition);
+        cargo=new SimpleInventory(kind.cargoSlots()) {
             @Override public boolean canPlayerUse(PlayerEntity p) { return !packed&&!isRemoved()&&quarantinedState==null&&p.squaredDistanceTo(TruckEntity.this)<=64; }
             @Override public boolean isValid(int slot,ItemStack stack) { return stack.getItem().canBeNested(); }
             @Override public void onOpen(ContainerUser user) { if(user.asLivingEntity() instanceof ServerPlayerEntity p) viewers.add(p); }
@@ -59,15 +62,15 @@ public final class TruckEntity extends Entity {
     @Override public boolean isAttackable() { return !isRemoved(); }
     @Override public float getStepHeight() { return .6f; }
     @Override protected boolean canAddPassenger(Entity passenger) {
-        return passenger instanceof PlayerEntity p&&!p.isSpectator()&&quarantinedState==null&&getPassengerList().size()<TruckSpec.SEATS;
+        return passenger instanceof PlayerEntity p&&!p.isSpectator()&&quarantinedState==null&&getPassengerList().size()<kind.seats.size();
     }
     @Override protected Vec3d getPassengerAttachmentPos(Entity p,EntityDimensions dimensions,float scale) {
-        int index=Math.max(0,getPassengerList().indexOf(p));double x=index==0?9/16.0:-9/16.0;
+        int index=Math.clamp(getPassengerList().indexOf(p),0,kind.seats.size()-1);var seat=kind.seats.get(index);
         double hip=.75*(p instanceof LivingEntity living?living.getScale():1);
-        return new Vec3d(x,24/16.0-hip,16/16.0).rotateY((float)-Math.toRadians(getYaw())).add(p.getVehicleAttachmentPos(this));
+        return new Vec3d(seat.x()/16.0,seat.topY()/16.0-hip,seat.z()/16.0).rotateY((float)-Math.toRadians(getYaw())).add(p.getVehicleAttachmentPos(this));
     }
     @Override public Vec3d updatePassengerForDismount(LivingEntity p) {
-        double distance=TruckSpec.WIDTH/2+.6;
+        double distance=kind.width/2+.6;
         for(double side:new double[]{distance,-distance}) for(int dy=1;dy>=-2;dy--) {
             Vec3d off=new Vec3d(side,dy,0).rotateY((float)-Math.toRadians(getYaw()));
             BlockPos pos=BlockPos.ofFloored(getX()+off.x,getY()+off.y,getZ()+off.z);World world=getEntityWorld();
@@ -88,6 +91,7 @@ public final class TruckEntity extends Entity {
     }
     private void stopControls() { controls.reset();driverId=null;setEngine(false);dataTracker.set(STEER,(byte)0); }
     private void setEngine(boolean enabled) { dataTracker.set(ENGINE,enabled);if(!enabled) dataTracker.set(ENGINE_LOAD,(byte)0); }
+    public VehicleKind kind() { return kind; }
     public int fuel() { return dataTracker.get(FUEL); }
     public int condition() { return dataTracker.get(CONDITION); }
     public boolean engineRunning() { return dataTracker.get(ENGINE); }
@@ -101,9 +105,9 @@ public final class TruckEntity extends Entity {
             double x=getX(),z=getZ();interpolator.tick();
             observedSpeed=TruckFeedback.observedSpeed(getX()-x,getZ()-z);
             double travel=TruckPhysics.signedSpeed(getX()-x,getZ()-z,getYaw());previousWheelAngle=wheelAngle;
-            if(Math.abs(travel)<2) wheelAngle+=(float)(travel/(5.5/16));
+            if(Math.abs(travel)<2) wheelAngle+=(float)(travel/(kind.wheelRadius/16));
             if(Math.abs(wheelAngle)>Math.PI*200) { float shift=(float)(Math.PI*200)*Math.signum(wheelAngle);wheelAngle-=shift;previousWheelAngle-=shift; }
-            steerAngle+=(dataTracker.get(STEER)/100f*.48f-steerAngle)*.35f;return;
+            steerAngle+=(dataTracker.get(STEER)/100f*kind.handling.steer()-steerAngle)*.35f;return;
         }
         if(packed||isRemoved()) return;
         if(damageCooldown>0) damageCooldown--;
@@ -117,8 +121,8 @@ public final class TruckEntity extends Entity {
         int keys=authorized?controls.keys(now):ControlLatch.BRAKE;
         dataTracker.set(ENGINE_LOAD,TruckFeedback.driveLoad(keys,engineRunning(),isOnGround()));
         double speed=TruckPhysics.signedSpeed(getVelocity().x,getVelocity().z,getYaw());
-        var motion=TruckPhysics.step(speed,getYaw(),keys,engineRunning(),isOnGround(),1);
-        setYaw(motion.yaw());dataTracker.set(STEER,(byte)Math.round(motion.steer()/.48f*100));
+        var motion=TruckPhysics.step(kind,speed,getYaw(),keys,engineRunning(),isOnGround(),1);
+        setYaw(motion.yaw());dataTracker.set(STEER,(byte)Math.round(motion.steer()/kind.handling.steer()*100));
         double angle=Math.toRadians(getYaw());
         Vec3d proposed=new Vec3d(-Math.sin(angle)*motion.speed(),Math.max(-1.2,getVelocity().y-.04),Math.cos(angle)*motion.speed());
         if(!destinationLoaded(proposed)) { proposed=Vec3d.ZERO;stopControls(); }
@@ -143,12 +147,12 @@ public final class TruckEntity extends Entity {
         if(player.isSneaking()) return pickup(player)?ActionResult.SUCCESS:ActionResult.FAIL;
         ItemStack held=player.getStackInHand(hand);
         if(held.getItem() instanceof FuelCanItem can) {
-            int amount=TruckPhysics.transferFuel(fuel(),can.remaining(held));dataTracker.set(FUEL,fuel()+amount);
+            int amount=TruckPhysics.transferFuel(kind,fuel(),can.remaining(held));dataTracker.set(FUEL,fuel()+amount);
             if(!player.getAbilities().creativeMode) can.consume(held,amount);
             dashboard(player);return ActionResult.SUCCESS;
         }
         if(held.isOf(MilitaryContent.REPAIR_KIT)) {
-            if(condition()<TruckSpec.CONDITION) { dataTracker.set(CONDITION,Math.min(TruckSpec.CONDITION,condition()+50));if(!player.getAbilities().creativeMode) held.decrement(1); }
+            if(condition()<kind.condition) { dataTracker.set(CONDITION,Math.min(kind.condition,condition()+50));if(!player.getAbilities().creativeMode) held.decrement(1); }
             dashboard(player);return ActionResult.SUCCESS;
         }
         if(held.isOf(Items.CHEST)) { openCargo(player);return ActionResult.SUCCESS; }
@@ -159,22 +163,23 @@ public final class TruckEntity extends Entity {
     }
     private void openCargo(PlayerEntity player) {
         player.openHandledScreen(new NamedScreenHandlerFactory() {
-            @Override public Text getDisplayName() { return Text.translatable("container.militaryvehicles.cargo"); }
+            @Override public Text getDisplayName() { return Text.translatable("container.militaryvehicles.cargo",Text.translatable("entity.militaryvehicles."+kind.id)); }
             @Override public ScreenHandler createMenu(int id,net.minecraft.entity.player.PlayerInventory inv,PlayerEntity p) { return new CargoScreenHandler(id,inv,cargo); }
         });
     }
     private void dashboard(PlayerEntity player) {
         int occupied=0;for(int i=0;i<cargo.size();i++) if(!cargo.getStack(i).isEmpty()) occupied++;
         Text status=Text.translatable("message.militaryvehicles."+(quarantinedState!=null?"invalid_state":condition()==0?"broken":isTouchingWater()?"flooded":fuel()==0?"empty":engineRunning()?"running":"stopped"));
-        player.sendMessage(Text.translatable("hud.militaryvehicles.truck",fuel(),TruckSpec.TANK,condition(),TruckSpec.CONDITION,occupied,TruckSpec.SLOTS,status),true);
+        player.sendMessage(Text.translatable("hud.militaryvehicles.truck",fuel(),kind.tank,condition(),kind.condition,occupied,kind.cargoSlots(),status),true);
     }
     private void message(PlayerEntity player,String key) { player.sendMessage(Text.translatable("message.militaryvehicles."+key),true); }
     public VehicleSave<ItemStack> snapshot() {
         if(quarantinedState!=null) throw new IllegalStateException("Unsupported save is quarantined");
-        List<ItemStack> items=new ArrayList<>(TruckSpec.SLOTS);for(int i=0;i<cargo.size();i++) items.add(cargo.getStack(i).copy());
-        return new VehicleSave<>(1,TruckSpec.ID,fuel(),condition(),fuelTicks,items);
+        List<ItemStack> items=new ArrayList<>(kind.cargoSlots());for(int i=0;i<cargo.size();i++) items.add(cargo.getStack(i).copy());
+        return new VehicleSave<>(1,kind.id,fuel(),condition(),fuelTicks,items);
     }
     public void restore(VehicleSave<ItemStack> state) {
+        state.requireType(kind);
         for(ItemStack stack:state.cargo()) if(!stack.isEmpty()&&!stack.getItem().canBeNested()) throw new IllegalArgumentException("Nested vehicle/container in cargo");
         dataTracker.set(FUEL,state.fuel());dataTracker.set(CONDITION,state.condition());fuelTicks=state.fuelTicks();
         for(int i=0;i<cargo.size();i++) cargo.setStack(i,state.cargo().get(i).copy());
@@ -183,7 +188,7 @@ public final class TruckEntity extends Entity {
     public ItemStack packedItem() {
         var ops=getRegistryManager().getOps(NbtOps.INSTANCE);NbtCompound data=new NbtCompound();
         data.put("VehicleState",SAVE_CODEC.encodeStart(ops,snapshot()).getOrThrow());
-        ItemStack item=new ItemStack(MilitaryContent.TRUCK);item.set(DataComponentTypes.CUSTOM_DATA,NbtComponent.of(data));
+        ItemStack item=new ItemStack(MilitaryContent.vehicleItem(kind));item.set(DataComponentTypes.CUSTOM_DATA,NbtComponent.of(data));
         if(getCustomName()!=null) item.set(DataComponentTypes.CUSTOM_NAME,getCustomName());return item;
     }
     private boolean pickup(PlayerEntity player) {

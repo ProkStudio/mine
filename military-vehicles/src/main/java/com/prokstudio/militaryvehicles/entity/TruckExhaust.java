@@ -13,7 +13,7 @@ public final class TruckExhaust {
             && !truck.isRemoved() && !truck.isTouchingWater();
         if (!TruckFeedback.emitExhaust(powered, truck.engineLoad(), world.getTime(), truck.getId())
                 || !Float.isFinite(truck.getYaw())) return;
-        var offset = TruckFeedback.exhaustOffset(truck.getYaw());
+        var offset = TruckFeedback.exhaustOffset(truck.kind(),truck.getYaw());
         double x = truck.getX() + offset.x(), y = truck.getY() + offset.y(), z = truck.getZ() + offset.z();
         BlockPos pos = BlockPos.ofFloored(x, y, z);
         if (!world.isChunkLoaded(pos) || !world.getWorldBorder().contains(pos)

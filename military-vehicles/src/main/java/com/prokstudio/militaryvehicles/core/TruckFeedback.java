@@ -46,11 +46,13 @@ public final class TruckFeedback {
         return (Math.floorMod(tick, interval) + Math.floorMod(id, interval)) % interval == 0;
     }
 
-    public static Offset exhaustOffset(float yaw) {
+    public static Offset exhaustOffset(float yaw) { return exhaustOffset(VehicleKind.TRUCK,yaw); }
+
+    public static Offset exhaustOffset(VehicleKind kind,float yaw) {
         if (!Float.isFinite(yaw)) throw new IllegalArgumentException("Non-finite exhaust yaw");
         double angle = Math.toRadians(TruckPhysics.wrap(yaw));
         double sin = Math.sin(angle), cos = Math.cos(angle);
-        return new Offset(EXHAUST_X * cos - EXHAUST_Z * sin, EXHAUST_Y,
-            EXHAUST_X * sin + EXHAUST_Z * cos);
+        var source=kind.exhaust;double x=source.x()/16,y=source.y()/16,z=source.z()/16;
+        return new Offset(x*cos-z*sin,y,x*sin+z*cos);
     }
 }

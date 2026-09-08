@@ -6,9 +6,11 @@ public final class EngineFeedback {
     private float volume;
     private float pitch = .78f;
 
-    public Frame update(boolean running, double load, double speed) {
+    public Frame update(boolean running, double load, double speed) { return update(VehicleKind.TRUCK,running,load,speed); }
+
+    public Frame update(VehicleKind kind,boolean running,double load,double speed) {
         double demand = unit(load);
-        double road = unit(Math.abs(speed) / TruckSpec.MAX_FORWARD);
+        double road = unit(Math.abs(speed) / kind.handling.forward());
         float targetVolume = running ? (float) (.22 + .15 * demand + .10 * road) : 0;
         float targetPitch = running ? (float) (.78 + .42 * demand + .32 * road) : .78f;
         volume += (targetVolume - volume) * (running ? .16f : .26f);

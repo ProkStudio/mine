@@ -23,7 +23,8 @@ tasks.withType(JavaCompile).configureEach { options.release = 21; options.encodi
 def artClasses = layout.buildDirectory.dir('art-classes')
 def artResources = layout.buildDirectory.dir('generated/assets')
 tasks.register('compileTruckArt', JavaCompile) {
-    source = files('tools/GenerateAssets.java', 'src/main/java/com/prokstudio/militaryvehicles/core/TruckGeometry.java')
+    source = files('tools/GenerateAssets.java', 'src/main/java/com/prokstudio/militaryvehicles/core/TruckGeometry.java',
+        'src/main/java/com/prokstudio/militaryvehicles/core/VehicleKind.java', 'src/main/java/com/prokstudio/militaryvehicles/core/VehicleGeometry.java')
     classpath = files()
     destinationDirectory = artClasses
     javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
@@ -64,3 +65,11 @@ tasks.register('feedbackSmoke', JavaExec) {
 }
 check.dependsOn feedbackSmoke
 apply from: 'audio.gradle'
+
+tasks.register('fleetSmoke', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.prokstudio.militaryvehicles.FleetSmoke'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+}
+check.dependsOn fleetSmoke
