@@ -62,8 +62,9 @@ final class VehicleSystems {
             ||player.currentScreenHandler!=player.playerScreenHandler||!vehicle.operationReady()) return;
         long now=world().getTime();if(now<0||now<=lastAction||action<1||action>3) return;
         if(action==3) {
-            if(!vehicle.kind().armed()||player!=vehicle.getFirstPassenger()||vehicle.getPassengerList().size()!=1
-                ||!VehicleOperations.parked(vehicle.getVelocity().horizontalLengthSquared())) { message(player,"crew_blocked");return; }
+            Vec3d velocity=vehicle.getVelocity();
+            if(!VehicleParking.canSwitchStation(vehicle.kind().armed(),player==vehicle.getFirstPassenger(),vehicle.getPassengerList().size(),
+                vehicle.isOnGround(),vehicle.isTouchingWater(),velocity.x,velocity.y,velocity.z)) { message(player,"crew_blocked");return; }
             lastAction=now;soloCrew=soloCrew==null?player.getUuid():null;vehicle.clearDriverControls();
             vehicle.syncSystems(turretYaw,gunPitch,deployment.ticks(),recoil,cooldown,soloCrew!=null);
             message(player,soloCrew==null?"driver_station":"gunner_station");return;

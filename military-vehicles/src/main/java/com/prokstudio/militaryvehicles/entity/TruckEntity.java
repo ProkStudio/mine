@@ -238,7 +238,8 @@ public final class TruckEntity extends Entity {
         if(getCustomName()!=null) item.set(DataComponentTypes.CUSTOM_NAME,getCustomName());return item;
     }
     private boolean pickup(PlayerEntity player) {
-        if(hasPassengers()||systems.locked()||getVelocity().horizontalLengthSquared()>.000225) { message(player,"park_first");return false; }
+        Vec3d velocity=getVelocity();
+        if(!VehicleParking.canPack(hasPassengers(),systems.locked(),isOnGround(),isTouchingWater(),velocity.x,velocity.y,velocity.z)) { message(player,"park_first");return false; }
         if(player.getInventory().getEmptySlot()<0) { message(player,"inventory_full");return false; }
         final ItemStack item;
         try { item=packedItem(); }catch(RuntimeException ex) { MilitaryVehicles.LOGGER.error("Truck packing failed; original retained",ex);message(player,"invalid_state");return false; }
