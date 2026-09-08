@@ -9,4 +9,4 @@ java -cp build/core-smoke com.prokstudio.militaryvehicles.FeedbackSmoke
 javac --release 21 -cp build/core-smoke -d build/core-smoke src/test/java/com/prokstudio/militaryvehicles/FleetSmoke.java
 java -cp build/core-smoke com.prokstudio.militaryvehicles.FleetSmoke
 javac --release 21 -cp build/core-smoke -d build/core-smoke src/test/java/com/prokstudio/militaryvehicles/{OperationsCases,OperationsSmoke}.java
-java -cp build/core-smoke com.prokstudio/militaryvehicles.OperationsSmoke
+java -cp build/core-smoke com.prokstudio.militaryvehicles.OperationsSmoke
