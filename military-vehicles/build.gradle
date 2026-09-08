@@ -23,8 +23,9 @@ tasks.withType(JavaCompile).configureEach { options.release = 21; options.encodi
 def artClasses = layout.buildDirectory.dir('art-classes')
 def artResources = layout.buildDirectory.dir('generated/assets')
 tasks.register('compileTruckArt', JavaCompile) {
-    source = files('tools/GenerateAssets.java', 'src/main/java/com/prokstudio/militaryvehicles/core/TruckGeometry.java',
-        'src/main/java/com/prokstudio/militaryvehicles/core/VehicleKind.java', 'src/main/java/com/prokstudio/militaryvehicles/core/VehicleGeometry.java')
+    source = files('tools/GenerateAssets.java', 'tools/GenerateRecipes.java', 'src/main/java/com/prokstudio/militaryvehicles/core/TruckGeometry.java',
+        'src/main/java/com/prokstudio/militaryvehicles/core/VehicleKind.java', 'src/main/java/com/prokstudio/militaryvehicles/core/VehicleGeometry.java',
+        'src/main/java/com/prokstudio/militaryvehicles/core/ExpansionGeometry.java')
     classpath = files()
     destinationDirectory = artClasses
     javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
@@ -73,3 +74,11 @@ tasks.register('fleetSmoke', JavaExec) {
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
 }
 check.dependsOn fleetSmoke
+
+tasks.register('operationsSmoke', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.prokstudio.militaryvehicles.OperationsSmoke'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+}
+check.dependsOn operationsSmoke

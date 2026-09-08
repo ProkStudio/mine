@@ -25,5 +25,23 @@
         "attenuation_distance": 32
       }
     ]
+  },
+  "tank_engine": {
+    "subtitle": "subtitles.militaryvehicles.tank_engine",
+    "sounds": [
+      {
+        "name": "militaryvehicles:tank_engine",
+        "attenuation_distance": 32
+      }
+    ]
+  },
+  "artillery_engine": {
+    "subtitle": "subtitles.militaryvehicles.artillery_engine",
+    "sounds": [
+      {
+        "name": "militaryvehicles:artillery_engine",
+        "attenuation_distance": 32
+      }
+    ]
   }
 }

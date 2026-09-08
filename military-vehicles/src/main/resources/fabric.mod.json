@@ -3,19 +3,13 @@
   "id": "militaryvehicles",
   "version": "${version}",
   "name": "Military Vehicles",
-  "description": "Military transport pack: logistics truck, scout buggy and 8x8 carrier with distinct rigs and shared server-authoritative systems.",
-  "authors": [
-    "ProkStudio"
-  ],
+  "description": "Eight ground vehicles: logistics, reconnaissance, personnel transport, tracked tank, fuel tanker, field workshop, recovery and deployable arcade PvE artillery. Server-authoritative shared systems and survival recipes.",
+  "authors": ["ProkStudio"],
   "license": "CC0-1.0",
   "environment": "*",
   "entrypoints": {
-    "main": [
-      "com.prokstudio.militaryvehicles.MilitaryVehicles"
-    ],
-    "client": [
-      "com.prokstudio.militaryvehicles.client.MilitaryVehiclesClient"
-    ]
+    "main": ["com.prokstudio.militaryvehicles.MilitaryVehicles"],
+    "client": ["com.prokstudio.militaryvehicles.client.MilitaryVehiclesClient"]
   },
   "depends": {
     "fabricloader": ">=0.19.5",

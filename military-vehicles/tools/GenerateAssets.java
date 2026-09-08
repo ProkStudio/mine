@@ -45,13 +45,16 @@ public final class GenerateAssets {
             String geometry="["+String.join(",",preview)+"]";
             Files.writeString(diagnostics.resolve(kind.id+"-geometry.json"),geometry,StandardCharsets.UTF_8);
             if(kind==VehicleKind.TRUCK) Files.writeString(diagnostics.resolve("truck-geometry.json"),geometry,StandardCharsets.UTF_8);
-            fleet.add(String.format("{\"id\":\"%s\",\"seats\":%d,\"cargoSlots\":%d,\"tank\":%d,\"condition\":%d,\"forward\":%.5f,\"reverse\":%.5f,\"width\":%.5f,\"height\":%.5f,\"wheels\":%d,\"steeringWheels\":%d,\"parts\":%d,\"boxes\":%d,\"sound\":\"%s\"}",
-                kind.id,kind.seats.size(),kind.cargoSlots(),kind.tank,kind.condition,kind.handling.forward(),kind.handling.reverse(),kind.width,kind.height,kind.wheels,kind.steeringWheels,parts.size(),boxCount,kind.soundId));
+            fleet.add(String.format("{\"id\":\"%s\",\"seats\":%d,\"cargoSlots\":%d,\"tank\":%d,\"condition\":%d,\"forward\":%.5f,\"reverse\":%.5f,\"width\":%.5f,\"height\":%.5f,\"wheels\":%d,\"steeringWheels\":%d,\"parts\":%d,\"boxes\":%d,\"sound\":\"%s\",\"tracked\":%s,\"armed\":%s,\"support\":%s}",
+                kind.id,kind.seats.size(),kind.cargoSlots(),kind.tank,kind.condition,kind.handling.forward(),kind.handling.reverse(),kind.width,kind.height,kind.wheels,kind.steeringWheels,parts.size(),boxCount,kind.soundId,kind.tracked(),kind.armed(),kind.support()));
         }
         model("fuel_can",textures.toString(),List.of(element(3,1,5,10,11,6,"olive"),element(4,12,6,2,3,4,"metal"),element(10,12,6,2,3,4,"metal"),element(6,14,6,4,1,4,"metal"),element(4,5,4.8,8,1,6.4,"accent")),display);
         model("repair_kit",textures.toString(),List.of(element(2,2,4,12,8,8,"dark"),element(2,10,4,12,1,8,"metal"),element(5,11,7,1,2,2,"metal"),element(10,11,7,1,2,2,"metal"),element(6,12,7,4,1,2,"metal"),element(7,4,3.8,2,4,.3,"accent"),element(6,5,3.8,4,2,.3,"accent")),display);
+        model("vehicle_frame",textures.toString(),List.of(element(3,5,1,2,3,14,"metal"),element(11,5,1,2,3,14,"metal"),element(5,5,3,6,2,2,"dark"),element(5,5,11,6,2,2,"dark"),element(6,7,6,4,3,4,"olive")),display);
+        model("vehicle_shell",textures.toString(),List.of(element(5,1,5,6,2,6,"dark"),element(5.5,3,5.5,5,8,5,"accent"),element(6,11,6,4,2,4,"metal"),element(7,13,7,2,2,2,"metal"),element(5.3,5,5.3,5.4,.7,5.4,"olive")),display);
         text("fleet.json","{\"schemaVersion\":1,\"vehicles\":["+String.join(",",fleet)+"]}\n");
-        System.out.println("Generated 3 vehicle rigs, 5 item models/definitions and "+VehicleGeometry.MATERIALS.size()+" original textures");
+        GenerateRecipes.generate(Path.of(args[0]));
+        System.out.println("Generated "+VehicleKind.values().length+" vehicle rigs, "+(VehicleKind.values().length+4)+" item models/definitions and "+VehicleGeometry.MATERIALS.size()+" original textures");
     }
     private static void model(String name,String textures,List<String> elements,String display) throws Exception {
         text("models/item/"+name+".json","{\"textures\":"+textures+",\"elements\":["+String.join(",",elements)+"],"+display+"}");
