@@ -1,21 +1,23 @@
 # Продолжение Military Vehicles
 
-Ветка: `feature/military-vehicles`. Отдельный модуль: `military-vehicles/` в `ProkStudio/mine`. База: `83df29e`. Main, существующий Harvester и Military Arsenal не изменять ради сборки этого независимого модуля.
+Ветка: `feature/military-vehicles`. Отдельный модуль: `military-vehicles/` в `ProkStudio/mine`. Исходная база: `83df29e`; первый прототип: `3588a5a`. Main, существующий Harvester и Military Arsenal не изменять ради сборки этого независимого модуля.
 
-## Прочитать
+## Текущее состояние
 
-README, ROADMAP, WORKLOG и QA в этой директории. Текущий этап — S1 + первый прототип грузовика S2. Не выдавать прототип за завершённый большой мод или за пройденную игровую приёмку.
+S2, **0.1.0-alpha.2**: к грузовику добавлены позиционный звук двигателя, серверный выхлоп, независимые огибающие и бюджет 8 петель. Подробности и происхождение звука — FEEDBACK-ALPHA2.md. Это не новый парк техники и не пройденная игровая приёмка.
+
+Прочитать README, ROADMAP, WORKLOG, QA и FEEDBACK-ALPHA2.md. `BUILD-REPORT.json` относится к **предыдущей alpha.1**; он не доказывает сборку текущего дерева. Для текущего коммита смотреть GitHub Actions и его `build/verification.json`.
 
 ## Проверить
 
-Из корня: `bash military-vehicles/tests/run-core.sh`, затем `./gradlew -p military-vehicles --no-daemon --console=plain --no-build-cache --rerun-tasks clean build`, затем `python3 military-vehicles/tools/verify_build.py`. На Windows — gradlew.bat и python. Установочный JAR — в `military-vehicles/build/libs/`, не sources.
+Из корня: `bash military-vehicles/tests/run-core.sh`, затем `bash ./gradlew -p military-vehicles --no-daemon --console=plain --no-build-cache --rerun-tasks clean build`, затем `python3 military-vehicles/tools/verify_build.py`. На Windows — gradlew.bat и python. Установочный JAR — в `military-vehicles/build/libs/`, не sources.
+
+Генератор звука использует build-only JAVE/FFmpeg; офлайн можно указать `-PtruckFfmpeg=/path/to/ffmpeg`, если остальные зависимости уже закэшированы. 41 обязательный JUnit-метод, 2 standalone-набора. Не путать обязательные методы с фактически выполненными; итог — в отчёте CI.
 
 ## Следующий шаг
 
-Сначала игровая приёмка первого грузовика на отдельном тестовом мире: места/камера, сохранение груза/компонентов, подбор в creative, dedicated server и два клиента, столкновения и timeout. После исправлений — более точная коллизия, рабочая подвеска, двери, руки на руле, звук и эффекты. Только затем отдельный багги; боевые системы/танк/артиллерия — следующие самостоятельные этапы.
+Игровая приёмка первого грузовика на отдельном тестовом мире: места/камера, сохранение груза/компонентов, подбор в creative, dedicated server и два клиента, столкновения и timeout. Для alpha.2 дополнительно: послушать двигатель и стык петли, выключение/отдаление/удаление машины, ползунки громкости, resource reload, несколько машин и позиция дыма у трубы.
+
+После исправлений — более точная коллизия, рабочая подвеска, двери, руки на руле. Только затем отдельный багги; боевые системы/танк/артиллерия — следующие самостоятельные этапы. Разработку проверяемых offline частей можно продолжать, но игровые пункты при этом остаются открытыми.
 
 Нет разрешения на изменение активных миров/модов пользователя, автоматическое принятие EULA или публикацию логов с личными данными. Не делать force push и не перетирать чужие изменения. Результаты проверок читать в WORKLOG и CI, не выводить их из старого сообщения.
-
-## Проверенная сборка этой итерации
-
-`clean build` и `tools/verify_build.py`: PASS, 25 JUnit cases без failures/errors/skips. `coreSmoke`: 90041 assertion. Подробности и SHA-256 — BUILD-REPORT.json. Это не Minecraft runtime или визуальная приёмка.
