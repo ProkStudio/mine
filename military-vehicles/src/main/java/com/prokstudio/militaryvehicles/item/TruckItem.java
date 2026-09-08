@@ -1,6 +1,7 @@
 package com.prokstudio.militaryvehicles.item;
 import com.prokstudio.militaryvehicles.MilitaryVehicles;
 import com.prokstudio.militaryvehicles.core.TruckSpec;
+import com.prokstudio.militaryvehicles.config.ServerFleetConfig;
 import com.prokstudio.militaryvehicles.core.VehicleKind;
 import com.prokstudio.militaryvehicles.entity.TruckEntity;
 import com.prokstudio.militaryvehicles.init.MilitaryContent;
@@ -47,7 +48,7 @@ public final class TruckItem extends Item {
         double radius=TruckSpec.LIMIT_RADIUS;
         // One budget across the fleet, not a separate quota for each registered entity type.
         int nearby=world.getEntitiesByClass(TruckEntity.class,box.expand(radius),e->!e.isRemoved()&&e.squaredDistanceTo(truck)<=radius*radius).size();
-        if(nearby>=TruckSpec.NEARBY_LIMIT) return fail(player,"limit");
+        if(nearby>=ServerFleetConfig.get(((ServerWorld)world).getServer()).nearbyVehicleLimit()) return fail(player,"limit");
         if(!((ServerWorld)world).spawnEntity(truck)) return ActionResult.FAIL;
         if(saved||!player.getAbilities().creativeMode) stack.decrement(1);
         player.sendMessage(Text.translatable("message.militaryvehicles.placed"),false);return ActionResult.SUCCESS;

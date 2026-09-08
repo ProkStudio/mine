@@ -4,6 +4,8 @@ import com.prokstudio.militaryvehicles.entity.TruckEntity;
 import com.prokstudio.militaryvehicles.init.MilitaryContent;
 import com.prokstudio.militaryvehicles.network.TruckInput;
 import com.prokstudio.militaryvehicles.network.VehicleAction;
+import com.prokstudio.militaryvehicles.network.FleetSettingsPayload;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -19,6 +21,9 @@ public final class MilitaryVehiclesClient implements ClientModInitializer {
     }
     private static boolean drain(KeyBinding key) {boolean pressed=false;while(key.wasPressed()) pressed=true;return pressed;}
     @Override public void onInitializeClient() {
+        ClientPlayConnectionEvents.INIT.register((handler,client)->ClientFleetSettings.clear());
+        ClientPlayConnectionEvents.DISCONNECT.register((handler,client)->ClientFleetSettings.clear());
+        ClientPlayNetworking.registerGlobalReceiver(FleetSettingsPayload.ID,(payload,context)->ClientFleetSettings.receive(payload.settings()));
         for(var kind:com.prokstudio.militaryvehicles.core.VehicleKind.values())
             EntityRendererRegistry.register(MilitaryContent.vehicleEntity(kind),context->new TruckRenderer(context,kind));
         ClientTickEvents.END_CLIENT_TICK.register(TruckAudio::tick);
@@ -33,6 +38,7 @@ public final class MilitaryVehiclesClient implements ClientModInitializer {
             if(focused&&showHelp) {
                 client.player.sendMessage(Text.translatable("message.militaryvehicles.role_controls",action.getBoundKeyLocalizedText(),deploy.getBoundKeyLocalizedText(),crew.getBoundKeyLocalizedText(),help.getBoundKeyLocalizedText()),false);
                 client.player.sendMessage(Text.translatable("help.militaryvehicles."+truck.kind().id),false);
+                ClientFleetSettings.help(client.player,truck.kind());
             }
             if(focused&&ClientPlayNetworking.canSend(VehicleAction.ID)) {
                 int command=changeCrew?3:stabilize?2:fire?1:0;

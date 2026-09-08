@@ -2,6 +2,7 @@ package com.prokstudio.militaryvehicles.entity;
 import com.mojang.serialization.Codec;
 import com.prokstudio.militaryvehicles.MilitaryVehicles;
 import com.prokstudio.militaryvehicles.core.*;
+import com.prokstudio.militaryvehicles.config.ServerFleetConfig;
 import com.prokstudio.militaryvehicles.init.MilitaryContent;
 import com.prokstudio.militaryvehicles.item.FuelCanItem;
 import net.minecraft.component.DataComponentTypes;
@@ -170,7 +171,7 @@ public final class TruckEntity extends Entity {
         Vec3d proposed=new Vec3d(-Math.sin(angle)*motion.speed(),Math.max(-1.2,getVelocity().y-.04),Math.cos(angle)*motion.speed());
         if(!destinationLoaded(proposed)) { proposed=Vec3d.ZERO;stopControls(); }
         setVelocity(proposed);move(MovementType.SELF,proposed);
-        if(engineRunning()) { fuelTicks++;if(fuelTicks>=10) { fuelTicks-=10;dataTracker.set(FUEL,Math.max(0,fuel()-1)); }if(fuel()==0) setEngine(false); }
+        if(engineRunning()) { fuelTicks++;if(fuelTicks>=10) { fuelTicks-=10;changeFuel(-ServerFleetConfig.get(((ServerWorld)getEntityWorld()).getServer()).engineDebit(fuel())); }if(fuel()==0) setEngine(false); }
         TruckExhaust.tick(this,(ServerWorld)getEntityWorld());
         if(driver!=null&&age%10==0) dashboard(driver);
     }
