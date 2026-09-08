@@ -82,3 +82,11 @@ tasks.register('operationsSmoke', JavaExec) {
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
 }
 check.dependsOn operationsSmoke
+
+tasks.register('tuningSmoke', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.prokstudio.militaryvehicles.TuningSmoke'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+}
+check.dependsOn tuningSmoke

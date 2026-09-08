@@ -10,3 +10,4 @@ javac --release 21 -cp build/core-smoke -d build/core-smoke src/test/java/com/pr
 java -cp build/core-smoke com.prokstudio.militaryvehicles.FleetSmoke
 javac --release 21 -cp build/core-smoke -d build/core-smoke src/test/java/com/prokstudio/militaryvehicles/{OperationsCases,OperationsSmoke}.java
 java -cp build/core-smoke com.prokstudio.militaryvehicles.OperationsSmoke
+bash tests/run-tuning.sh
