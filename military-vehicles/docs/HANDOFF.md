@@ -16,7 +16,7 @@ EXPANSION-ALPHA1 описывает парк и историю 0.3-alpha.1; це
 - `TrackDrive` — два гусеничных типа; `VehicleSystems` — серверные посты/опоры/операции/огонь; `VehicleOperations`, `ServiceTargeting` и `VehicleParking` — проверяемые чистые правила.
 - `FleetTuning` — неизменяемый проверенный снимок. `FleetConfigFile` читает ограниченный UTF-8 файл и заменяет снимок только после успешной валидации. `ServerFleetConfig` владеет состоянием логического сервера; клиентский снимок только для отображения и сбрасывается между соединениями.
 - Сервер получает намерение, не цель/положение/урон. Нет C2S-пакета изменения конфигурации. Reload не сбрасывает активный cooldown; восстановление даёт не менее `max(100, настроенный интервал)`.
-- Geometry, registry ID, размеры, места, груз 9/18/27 и v1 не менялись. `fuelTicks` остаётся 0–9. Общий лимит постановки — 1–12, не отдельная квота на тип; звуковой бюджетет 8 прежний.
+- Geometry, registry ID, размеры, места, груз 9/18/27 и v1 не менялись. `fuelTicks` остаётся 0–9. Общий лимит постановки — 1–12, не отдельная квота на тип; звуковой бюджет 8 прежний.
 - **122 обязательных JUnit-метода**, включая все прежние 112. Шесть standalone-наборов. Gate нельзя ослаблять/пропускать ради зелёной сборки.
 
 Из корня: `bash military-vehicles/tests/run-core.sh`; `bash ./gradlew -p military-vehicles --no-daemon --console=plain --no-build-cache --rerun-tasks clean build`; `python3 military-vehicles/tools/verify_build.py`. JDK 21. Audio encoder build-only; опционально `-PtruckFfmpeg=/path/to/ffmpeg`. Отдельно: `bash military-vehicles/tests/run-parking.sh` и `bash military-vehicles/tests/run-tuning.sh`.
