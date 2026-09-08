@@ -4,7 +4,7 @@ import java.util.*;
 import com.prokstudio.militaryvehicles.core.TruckGeometry.Box;
 import com.prokstudio.militaryvehicles.core.TruckGeometry.Part;
 
-/** Three distinct original CC0 rigs. Existing truck geometry is reused unchanged, not copied into each vehicle. */
+/** Original CC0 rigs. The three initial vehicle geometries remain unchanged. */
 public final class VehicleGeometry {
     public static final Map<String,Integer> MATERIALS;
     static {
@@ -16,7 +16,7 @@ public final class VehicleGeometry {
     private static Box b(float x,float y,float z,float w,float h,float d) { return new Box(x,y,z,w,h,d); }
     private static void part(List<Part> p,String name,String material,Box... boxes) { p.add(new Part(name,material,0,0,0,false,false,List.of(boxes))); }
     public static List<Part> create(VehicleKind kind) {
-        return switch(kind) {case TRUCK->TruckGeometry.create();case BUGGY->buggy();case CARRIER->carrier();};
+        return switch(kind) {case TRUCK->TruckGeometry.create();case BUGGY->buggy();case CARRIER->carrier();default->ExpansionGeometry.create(kind);};
     }
     private static void wheels(List<Part> p,VehicleKind kind,float x,float... axles) {
         float r=kind.wheelRadius;
