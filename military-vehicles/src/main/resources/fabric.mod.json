@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "militaryvehicles",
+  "version": "${version}",
+  "name": "Military Vehicles",
+  "description": "Standalone military transport. First alpha: a server-controlled 6x6 logistics truck.",
+  "authors": [
+    "ProkStudio"
+  ],
+  "license": "CC0-1.0",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.prokstudio.militaryvehicles.MilitaryVehicles"
+    ],
+    "client": [
+      "com.prokstudio.militaryvehicles.client.MilitaryVehiclesClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "=1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "junit_cases": 25,
+  "jar": "military-vehicles-0.1.0-alpha.1.jar",
+  "bytes": 181000,
+  "sha256": "369c77ea1bb00c002e7a629b4a8a69227f1b96296d2e021f3f7364a32da45259",
+  "minecraft_runtime_tested": false,
+  "checks": [
+    "clean build: main and client compilation",
+    "25 JUnit cases: 0 failures/errors/skips",
+    "coreSmoke: 90041 assertions",
+    "strict installable remapped JAR validation"
+  ],
+  "runtime_qa": "Not run: Minecraft client, dedicated server, two players, passenger/camera/visual acceptance"
+}
