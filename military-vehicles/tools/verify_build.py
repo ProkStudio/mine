@@ -62,7 +62,8 @@ with zipfile.ZipFile(jar) as a:
     expected_fleet = {
         'truck_6x6': (2,27,2400,200,6,2,'truck_engine'), 'scout_buggy': (2,9,1200,120,4,2,'buggy_engine'), 'carrier_8x8': (6,18,3200,360,8,4,'carrier_engine'),
         'warden_tank': (2,9,4000,500,14,0,'tank_engine'), 'fuel_tanker': (2,9,9600,240,6,2,'truck_engine'), 'field_workshop': (2,27,2800,260,6,2,'truck_engine'),
-        'recovery_vehicle': (2,18,3200,300,6,2,'truck_engine'), 'bastion_howitzer': (2,18,3600,340,14,0,'artillery_engine')}
+        'recovery_vehicle': (2,18,3200,300,6,2,'truck_engine'), 'bastion_howitzer': (2,18,3600,340,14,0,'artillery_engine'),
+        'lancer_ifv': (6,18,2600,300,12,0,'tank_engine')}
     expected_items = set(expected_fleet) | {'fuel_can','repair_kit','vehicle_frame','vehicle_shell'}
     assert {n.removeprefix('assets/militaryvehicles/items/').removesuffix('.json') for n in names if n.startswith('assets/militaryvehicles/items/') and n.endswith('.json')} == expected_items
     for item in sorted(expected_items):
@@ -107,12 +108,12 @@ with zipfile.ZipFile(jar) as a:
     fleet = json.loads(a.read(base+'fleet.json'))
     assert fleet['schemaVersion'] == 1
     vehicles = {v['id']: v for v in fleet['vehicles']}
-    assert len(fleet['vehicles']) == len(vehicles) == len(expected_fleet) == 8
+    assert len(fleet['vehicles']) == len(vehicles) == len(expected_fleet) == 9
     assert set(vehicles) == set(expected_fleet)
     for key, spec in expected_fleet.items():
         assert tuple(vehicles[key][field] for field in ('seats','cargoSlots','tank','condition','wheels','steeringWheels','sound')) == spec
         assert vehicles[key]['parts'] > 30 and vehicles[key]['boxes'] > 60
-        assert vehicles[key]['tracked'] == (key in {'warden_tank','bastion_howitzer'})
+        assert vehicles[key]['tracked'] == (key in {'warden_tank','bastion_howitzer','lancer_ifv'})
         assert vehicles[key]['armed'] == vehicles[key]['tracked']
         assert vehicles[key]['support'] == (key in {'fuel_tanker','field_workshop','recovery_vehicle'})
         for prefix in ('item.','entity.','help.'):
