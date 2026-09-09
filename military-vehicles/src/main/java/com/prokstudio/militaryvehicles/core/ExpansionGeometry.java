@@ -31,6 +31,7 @@ public final class ExpansionGeometry {
             p.add(old.wheel()&&old.material().equals("rubber")?roundWheel(old):old);
         }
         switch(kind) {case TANKER->tanker(p);case WORKSHOP->workshop(p);case RECOVERY->recovery(p);default->throw new AssertionError(kind);}
+        serviceKit(kind,p);
         return List.copyOf(p);
     }
     private static Part roundWheel(Part p) {
@@ -89,6 +90,43 @@ public final class ExpansionGeometry {
         part(p,"blade_mounts","metal",b(-12,8,-38,2,3,6),b(10,8,-38,2,3,6));
         for(int side:new int[]{-1,1}) part(p,"recovery_tool_case_"+side,"sand",b(side<0?-17:11,18,-4,6,7,8));
         part(p,"hazard_marks","accent",b(-18,7,-39.2f,5,1,.15f),b(-8,7,-39.2f,5,1,.15f),b(3,7,-39.2f,5,1,.15f),b(13,7,-39.2f,5,1,.15f));
+    }
+    /** Crew-facing service kit: rear access, work lighting, chocks, extinguisher and stowed supplies on the shared chassis. */
+    private static void serviceKit(VehicleKind kind,List<Part> p) {
+        for(int side:new int[]{-1,1}) {
+            part(p,"crew_step_"+side,"metal",b(side<0?-13:10,3,-35,3,1,3),b(side<0?-13:10,6,-35,3,1,3),b(side<0?-11.6f:10.6f,4,-34.5f,1,2,1.2f));
+            part(p,"wheel_chock_"+side,"dark",b(side<0?-12:9,7,13,3,2,4));
+            part(p,"work_lamp_housing_"+side,"dark",b(side<0?-17:13,44,9,4,2,2));
+            part(p,"work_lamp_"+side,"light",b(side<0?-16.5f:13.5f,44.4f,8.75f,3,1.4f,.25f));
+            part(p,"grab_handle_"+side,"metal",b(side*16.7f-.35f,16,10.2f,.7f,12,.7f));
+            part(p,"mud_guard_mid_"+side,"rubber",b(side<0?-20:14,2,-17,6,7,.7f));
+        }
+        part(p,"beacon_mount","dark",b(-13,44,26,4,.8f,4));
+        part(p,"warning_beacon","tail",b(-12.2f,44.8f,26.8f,2.4f,1.6f,2.4f));
+        part(p,"extinguisher_bracket","dark",b(-19.4f,9,7,7.4f,1,4));
+        part(p,"fire_extinguisher","tail",b(-18.6f,10,7.6f,1.8f,5,2.8f));
+        part(p,"supply_rack","metal",b(12,9,7,7.4f,1,4),b(16.4f,14,7,3,1,4));
+        part(p,"jerry_cans","olive",b(16.6f,10,7.4f,2.6f,4,1.6f),b(16.6f,10,9.4f,2.6f,4,1.6f));
+        // The recovery rig already marks its rear with the blade and hazard stripes, so it keeps that face clear.
+        if(kind!=VehicleKind.RECOVERY) part(p,"hazard_chevrons_rear","marking",b(-16,9.2f,-37.2f,32,1.6f,.2f));
+        switch(kind) {
+            case TANKER->{
+                part(p,"grounding_reel","metal",b(-13.5f,3,-20,4,4,4));
+                part(p,"grounding_cable","dark",b(-12.5f,4.2f,-16,.6f,.6f,3));
+            }
+            case WORKSHOP->{
+                part(p,"generator_set","dark",b(-7,4,-21,14,5,7));
+                part(p,"generator_vents","metal",b(-6,5,-21.3f,12,3,.3f));
+                part(p,"generator_exhaust","metal",b(4,9,-19,1,3,1));
+            }
+            case RECOVERY->{
+                part(p,"chain_locker","dark",b(9.5f,4,-20,4,4,4));
+                part(p,"snatch_blocks","metal",b(10,8,-19.5f,3,1,3));
+                part(p,"light_bar_mount","dark",b(-8,44,30,16,1,2));
+                part(p,"light_bar","light",b(-7.5f,45,29.7f,15,1.4f,.3f));
+            }
+            default->throw new AssertionError(kind);
+        }
     }
     private static List<Part> tracked(VehicleKind kind) {
         List<Part> p=new ArrayList<>();boolean artillery=kind==VehicleKind.HOWITZER;
