@@ -6,13 +6,17 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class FleetProfileTest {
     @Test void stableIdsAndCapacitiesCoverThreeDistinctRoles() {
-        // Historical method name retained; exact registry coverage now includes all eight roles.
-        assertEquals(Set.of("truck_6x6","scout_buggy","carrier_8x8","warden_tank","fuel_tanker","field_workshop","recovery_vehicle","bastion_howitzer"),new HashSet<>(Arrays.stream(VehicleKind.values()).map(k->k.id).toList()));
+        // Historical method name retained; exact registry coverage now includes all nine roles.
+        assertEquals(Set.of("truck_6x6","scout_buggy","carrier_8x8","warden_tank","fuel_tanker","field_workshop","recovery_vehicle","bastion_howitzer","lancer_ifv"),new HashSet<>(Arrays.stream(VehicleKind.values()).map(k->k.id).toList()));
         assertEquals(5,Arrays.stream(VehicleKind.values()).map(k->k.soundId).distinct().count());
         assertEquals(2,VehicleKind.TRUCK.seats.size());assertEquals(2,VehicleKind.BUGGY.seats.size());assertEquals(6,VehicleKind.CARRIER.seats.size());
         assertEquals(27,VehicleKind.TRUCK.cargoSlots());assertEquals(9,VehicleKind.BUGGY.cargoSlots());assertEquals(18,VehicleKind.CARRIER.cargoSlots());
         assertEquals(1200,VehicleKind.BUGGY.tank);assertEquals(3200,VehicleKind.CARRIER.tank);
         assertEquals(120,VehicleKind.BUGGY.condition);assertEquals(360,VehicleKind.CARRIER.condition);
+        // The fighting vehicle shares the heavy engine loop but keeps its own capacity and endurance.
+        assertEquals(6,VehicleKind.IFV.seats.size());assertEquals(18,VehicleKind.IFV.cargoSlots());
+        assertEquals(2600,VehicleKind.IFV.tank);assertEquals(300,VehicleKind.IFV.condition);
+        assertEquals(VehicleKind.TANK.soundId,VehicleKind.IFV.soundId);
         assertTrue(VehicleKind.find("tank").isEmpty());assertThrows(IllegalArgumentException.class,()->VehicleKind.require("unknown"));
     }
     @Test void legacyTruckProfileMatchesExistingConstants() {
@@ -29,6 +33,8 @@ class FleetProfileTest {
         assertTrue(VehicleKind.TRUCK.handling.forward()>VehicleKind.CARRIER.handling.forward());
         assertTrue(VehicleKind.BUGGY.handling.acceleration()>VehicleKind.CARRIER.handling.acceleration());
         assertTrue(VehicleKind.BUGGY.handling.yawRate()>VehicleKind.CARRIER.handling.yawRate());
+        assertTrue(VehicleKind.IFV.handling.forward()>VehicleKind.TANK.handling.forward());
+        assertTrue(VehicleKind.IFV.condition<VehicleKind.TANK.condition);
         for(var k:VehicleKind.values()) {
             assertTrue(k.handling.reverse()>0&&k.handling.reverse()<k.handling.forward());
             assertTrue(k.cargoRows>=1&&k.cargoRows<=3);assertEquals(k.cargoRows*9,k.cargoSlots());

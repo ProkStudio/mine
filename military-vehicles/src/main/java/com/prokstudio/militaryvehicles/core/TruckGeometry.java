@@ -80,6 +80,21 @@ public final class TruckGeometry {
         part(p,"spare_hub","metal",b(-2,21,.7f,4,4,3.6f));
         part(p,"rear_mudflaps","rubber",b(-20,1,-33,6,9,.7f),b(14,1,-33,6,9,.7f));
         part(p,"roof_hatch","dark",b(-6,44,13,12,.7f,12));
+        // Field-convertible cargo bed: tilt frame, rolled canvas, troop benches and a working tailgate.
+        for(int i=0;i<4;i++) {
+            float z=-31+i*9;
+            part(p,"bed_tilt_hoop_"+i,"metal",b(-16.4f,26.8f,z,1.4f,12.4f,1.2f),b(15,26.8f,z,1.4f,12.4f,1.2f),b(-16.4f,39.2f,z,32.8f,1.2f,1.2f));
+        }
+        part(p,"bed_canvas_cradles","metal",b(-11,37,.8f,1,2.4f,2.4f),b(10,37,.8f,1,2.4f,2.4f));
+        part(p,"bed_canvas_roll","canvas",b(-13,39.4f,0,26,2.8f,4));
+        for(int side:new int[]{-1,1}) {
+            part(p,"bed_bench_"+side,"seat",b(side<0?-15:9,20,-32,6,1.5f,35),
+                b(side<0?-14:10,16,-31,4,4,1.2f),b(side<0?-14:10,16,-16,4,4,1.2f),b(side<0?-14:10,16,-1,4,4,1.2f));
+            part(p,"bed_lashing_rings_"+side,"metal",b(side<0?-15:14.4f,22,-30,.6f,1,1),b(side<0?-15:14.4f,22,-18,.6f,1,1),b(side<0?-15:14.4f,22,-6,.6f,1,1));
+        }
+        part(p,"tailgate_panel","olive",b(-15,16.6f,-35.9f,30,9.4f,.6f));
+        part(p,"tailgate_latches","metal",b(-11,21,-36.3f,2,1.4f,.4f),b(9,21,-36.3f,2,1.4f,.4f));
+        part(p,"tailgate_step","metal",b(-5,6.6f,-37.4f,10,1.2f,2));
         return List.copyOf(p);
     }
 }

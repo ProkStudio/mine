@@ -117,7 +117,7 @@ public final class OperationsCases {
     }
     public static void aimIsRateLimitedWrappedAndPitchClamped() {
         equal(-178,VehicleOperations.aimYaw(179,-175));
-        for(var k:List.of(VehicleKind.TANK,VehicleKind.HOWITZER)) for(int target=-720;target<=720;target++) {
+        for(var k:List.of(VehicleKind.TANK,VehicleKind.HOWITZER,VehicleKind.IFV)) for(int target=-720;target<=720;target++) {
             float yaw=0,pitch=0;for(int i=0;i<60;i++) {float next=VehicleOperations.aimYaw(yaw,target);check(Math.abs(TruckPhysics.wrap(next-yaw))<=3.001,"yaw slew");yaw=next;
                 pitch=VehicleOperations.aimPitch(k,pitch,target);check(pitch>=VehicleOperations.minPitch(k)&&pitch<=VehicleOperations.maxPitch(k),"elevation limits");}
         }
@@ -136,10 +136,13 @@ public final class OperationsCases {
         }
     }
     public static void newRigsHaveOwnMissionHardware() {
-        Map<VehicleKind,String> required=Map.of(VehicleKind.TANK,"turret_armor",VehicleKind.HOWITZER,"turret_shield",VehicleKind.TANKER,"faceted_reservoir",VehicleKind.WORKSHOP,"workshop_box",VehicleKind.RECOVERY,"winch_mast");
+        Map<VehicleKind,String> required=Map.of(VehicleKind.TANK,"turret_armor",VehicleKind.HOWITZER,"turret_shield",VehicleKind.IFV,"turret_atgm_pod",VehicleKind.TANKER,"faceted_reservoir",VehicleKind.WORKSHOP,"workshop_box",VehicleKind.RECOVERY,"winch_mast");
         Set<List<TruckGeometry.Part>> all=new HashSet<>();
         for(var k:VehicleKind.values()) {var rig=VehicleGeometry.create(k);check(all.add(rig),"distinct rigs");if(required.containsKey(k))check(rig.stream().anyMatch(p->p.name().equals(required.get(k))),"mission hardware");}
         equal(4,VehicleGeometry.create(VehicleKind.HOWITZER).stream().filter(p->p.name().startsWith("outrigger_leg_")).count());
+        // The fighting compartment is modelled, not implied: glazed ports, their frames and a boarding ramp.
+        equal(4,VehicleGeometry.create(VehicleKind.IFV).stream().filter(p->p.name().startsWith("firing_port_")).count());
+        check(VehicleGeometry.create(VehicleKind.IFV).stream().anyMatch(p->p.name().equals("rear_ramp")),"boarding ramp");
         check(VehicleGeometry.create(VehicleKind.TRUCK).equals(TruckGeometry.create()),"truck unchanged");
     }
     private static double[] rotate(double x,double y,double z,double rx,double ry) {
@@ -160,10 +163,18 @@ public final class OperationsCases {
             }
     }
     public static void newProfilesHaveExpectedCapacitiesAndDriveFamilies() {
-        equal(8,VehicleKind.values().length);equal(2,Arrays.stream(VehicleKind.values()).filter(VehicleKind::tracked).count());equal(3,Arrays.stream(VehicleKind.values()).filter(VehicleKind::support).count());
+        equal(9,VehicleKind.values().length);equal(3,Arrays.stream(VehicleKind.values()).filter(VehicleKind::tracked).count());equal(3,Arrays.stream(VehicleKind.values()).filter(VehicleKind::support).count());
         equal(8,VehicleOperations.maxPitch(VehicleKind.HOWITZER)); // Direct-fire mode needs depression to reach nearby ground targets.
         equal(9600,VehicleKind.TANKER.tank);equal(27,VehicleKind.WORKSHOP.cargoSlots());equal(18,VehicleKind.RECOVERY.cargoSlots());equal(500,VehicleKind.TANK.condition);
         for(var k:List.of(VehicleKind.TANK,VehicleKind.HOWITZER)) {equal(14,k.wheels);equal(0,k.steeringWheels);equal(2,k.seats.size());}
+        // The fighting vehicle rides the tracked family but carries a squad, so it trades reach and punch for elevation and room.
+        equal(12,VehicleKind.IFV.wheels);equal(0,VehicleKind.IFV.steeringWheels);equal(6,VehicleKind.IFV.seats.size());
+        equal(18,VehicleKind.IFV.cargoSlots());equal(2600,VehicleKind.IFV.tank);equal(300,VehicleKind.IFV.condition);
+        check(VehicleOperations.minPitch(VehicleKind.IFV)<VehicleOperations.minPitch(VehicleKind.TANK),"autocannon depresses further");
+        check(VehicleOperations.maxPitch(VehicleKind.IFV)>VehicleOperations.maxPitch(VehicleKind.TANK),"autocannon elevates higher");
+        check(VehicleOperations.gunDamage(VehicleKind.IFV)<VehicleOperations.gunDamage(VehicleKind.TANK),"lighter round");
+        check(VehicleOperations.gunRange(VehicleKind.IFV)<VehicleOperations.gunRange(VehicleKind.TANK),"shorter reach");
+        equal(VehicleOperations.gunCooldown(VehicleKind.TANK),VehicleOperations.gunCooldown(VehicleKind.IFV));
     }
     public static long runAll() {
         checks=0;

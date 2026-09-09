@@ -41,7 +41,8 @@ final class VehicleSystems {
         if(cooldown>0) cooldown--;if(recoil>0) recoil--;
         var first=vehicle.getFirstPassenger();
         if(soloCrew!=null&&(first==null||!soloCrew.equals(first.getUuid())||vehicle.getPassengerList().size()!=1)) soloCrew=null;
-        deployment=deployment.tick(VehicleOperations.parked(vehicle.getVelocity().horizontalLengthSquared()),vehicle.isOnGround(),vehicle.operationReady()&&vehicle.condition()>0&&!vehicle.isTouchingWater());
+        Vec3d motion=vehicle.getVelocity();
+        deployment=deployment.tick(VehicleParking.stationary(motion.x,motion.y,motion.z),vehicle.isOnGround(),vehicle.operationReady()&&vehicle.condition()>0&&!vehicle.isTouchingWater());
         if(vehicle.kind().armed()) {
             for(var passenger:vehicle.getPassengerList()) if(passenger instanceof ServerPlayerEntity p&&vehicle.effectiveSeat(p)==1&&!p.isSpectator()&&p.currentScreenHandler==p.playerScreenHandler) {
                 turretYaw=VehicleOperations.aimYaw(turretYaw,TruckPhysics.wrap(p.getYaw()-vehicle.getYaw()));
@@ -62,8 +63,9 @@ final class VehicleSystems {
             ||player.currentScreenHandler!=player.playerScreenHandler||!vehicle.operationReady()) return;
         long now=world().getTime();if(now<0||now<=lastAction||action<1||action>3) return;
         if(action==3) {
-            if(!vehicle.kind().armed()||player!=vehicle.getFirstPassenger()||vehicle.getPassengerList().size()!=1
-                ||!VehicleOperations.parked(vehicle.getVelocity().horizontalLengthSquared())) { message(player,"crew_blocked");return; }
+            Vec3d velocity=vehicle.getVelocity();
+            if(!VehicleParking.canSwitchStation(vehicle.kind().armed(),player==vehicle.getFirstPassenger(),vehicle.getPassengerList().size(),
+                vehicle.isOnGround(),vehicle.isTouchingWater(),velocity.x,velocity.y,velocity.z)) { message(player,"crew_blocked");return; }
             lastAction=now;soloCrew=soloCrew==null?player.getUuid():null;vehicle.clearDriverControls();
             vehicle.syncSystems(turretYaw,gunPitch,deployment.ticks(),recoil,cooldown,soloCrew!=null);
             message(player,soloCrew==null?"driver_station":"gunner_station");return;
@@ -71,7 +73,8 @@ final class VehicleSystems {
         if(!VehicleOperations.authorized(vehicle.kind(),vehicle.effectiveSeat(player),action)) { message(player,"wrong_station");return; }
         lastAction=now;
         if(action==VehicleOperations.DEPLOY) {
-            if(!VehicleOperations.parked(vehicle.getVelocity().horizontalLengthSquared())||!vehicle.isOnGround()||vehicle.isTouchingWater()||vehicle.condition()==0) { message(player,"service_park");return; }
+            Vec3d motion=vehicle.getVelocity();
+            if(!VehicleParking.canOperate(vehicle.isOnGround(),vehicle.isTouchingWater(),motion.x,motion.y,motion.z)||vehicle.condition()==0) { message(player,"service_park");return; }
             deployment=deployment.toggle(true,true);vehicle.clearDriverControls();
             message(player,deployment.extending()?"deploying":"retracting");return;
         }
@@ -110,8 +113,10 @@ final class VehicleSystems {
             if(distance>=blockDistance) continue; // A wall wins ties; never service through it.
             boolean usable=false;
             if(entity instanceof TruckEntity target) {
+                Vec3d motion=target.getVelocity();
                 usable=ServiceTargeting.ready(target.operationReady(),target.hasPassengers(),target.engineRunning(),target.systemsLocked(),
-                    target.isOnGround(),target.isTouchingWater(),target.getVelocity().lengthSquared())
+                    target.isOnGround(),target.isTouchingWater(),motion.lengthSquared())
+                    &&VehicleParking.stationary(motion.x,motion.y,motion.z)
                     &&target.squaredDistanceTo(vehicle)<=VehicleOperations.SERVICE_RANGE*VehicleOperations.SERVICE_RANGE
                     &&permitted(player,target.getBoundingBox().getCenter());
                 targets.put(target.getId(),target);
@@ -126,7 +131,8 @@ final class VehicleSystems {
         if(!settings.supportEnabled()) {message(player,"system_disabled");return;}
         if(!permitted(player,position(vehicle))) {message(player,"recovery_blocked");return;}
         if(cooldown>0) {message(player,"cooldown");return;}
-        if(!vehicle.engineRunning()||!vehicle.isOnGround()||vehicle.isTouchingWater()||vehicle.condition()==0||!VehicleOperations.parked(vehicle.getVelocity().horizontalLengthSquared())) {message(player,"service_park");return;}
+        Vec3d motion=vehicle.getVelocity();
+        if(!vehicle.engineRunning()||vehicle.condition()==0||!VehicleParking.canOperate(vehicle.isOnGround(),vehicle.isTouchingWater(),motion.x,motion.y,motion.z)) {message(player,"service_park");return;}
         TruckEntity target=serviceTarget(player);if(target==null) {message(player,"service_target");return;}
         switch(vehicle.kind()) {
             case TANKER -> {

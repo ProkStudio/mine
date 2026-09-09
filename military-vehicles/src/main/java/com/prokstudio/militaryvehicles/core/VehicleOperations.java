@@ -41,10 +41,11 @@ public final class VehicleOperations {
     public static int restoredCooldown(FleetTuning settings,VehicleKind kind) {
         return Math.max(100,kind.armed()?gunCooldown(settings,kind):settings.serviceCooldownTicks());
     }
-    public static double gunRange(VehicleKind kind) { return kind==VehicleKind.HOWITZER?64:48; }
-    public static float gunDamage(VehicleKind kind) { return kind==VehicleKind.HOWITZER?18:12; }
-    public static float minPitch(VehicleKind kind) { return kind==VehicleKind.HOWITZER?-55:-20; }
-    public static float maxPitch(VehicleKind kind) { return kind==VehicleKind.HOWITZER?8:12; }
+    // The autocannon trades reach and punch for elevation: it is a squad weapon, not a main gun.
+    public static double gunRange(VehicleKind kind) { return kind==VehicleKind.HOWITZER?64:kind==VehicleKind.IFV?40:48; }
+    public static float gunDamage(VehicleKind kind) { return kind==VehicleKind.HOWITZER?18:kind==VehicleKind.IFV?9:12; }
+    public static float minPitch(VehicleKind kind) { return kind==VehicleKind.HOWITZER?-55:kind==VehicleKind.IFV?-45:-20; }
+    public static float maxPitch(VehicleKind kind) { return kind==VehicleKind.HOWITZER?8:kind==VehicleKind.IFV?15:12; }
     public static float aimYaw(float current,float target) {
         if(!Float.isFinite(current)||!Float.isFinite(target)) return 0;
         return TruckPhysics.wrap(current+(float)TruckPhysics.clamp(TruckPhysics.wrap(target-current),-3,3));
