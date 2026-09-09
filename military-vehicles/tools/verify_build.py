@@ -26,6 +26,8 @@ expected['FleetTuningTest'] = {'defaultsPreserveLegacyEconomy', 'partialFilesInh
 
 expected['VehicleParkingTest'] = {'packingAllowsStoppedDryEmptyVehicle', 'packingKeepsPassengerAndDeploymentLocks', 'packingRejectsAirAndWater', 'packingIncludesVerticalAndDiagonalMotion', 'packingRejectsNonFiniteAndOverflowingVelocity', 'packingPreservesLegacySpeedBoundary', 'stationSwitchRequiresArmedSoleFirstPassenger', 'stationSwitchRejectsAirWaterAndVerticalMotion', 'stationSwitchRejectsNonFiniteAndOverflowingVelocity', 'stationSwitchPreservesStopThreshold'}
 
+expected['EngineIntentTest'] = {'firstPressAfterMountStillStartsEngine', 'heldEngineKeyCannotToggleAfterControlTimeout', 'repeatedTimeoutsCannotAccumulateIntent', 'releaseAfterTimeoutRestoresEnginePress', 'remountWithHeldKeyCannotStartEngine', 'remountAfterReleaseTogglesAgain', 'awaitingReleaseDoesNotBlockDrivingOrBrake', 'staleInputStillBrakesAndDiscardsToggle', 'invalidAndReplayedPacketsCannotArmTheEngine', 'separateSeatsDoNotShareEngineIntent', 'legacyControlLatchExpectationsPreserved'}
+
 report = root/'build/verification.json'
 report.unlink(missing_ok=True)
 seen = {k: set() for k in expected}
@@ -49,7 +51,7 @@ with zipfile.ZipFile(jar) as a:
     m = json.loads(a.read('fabric.mod.json'))
     assert m['version'] == version and m['id'] == 'militaryvehicles'
     assert m['depends']['minecraft'] == '=1.21.11' and m['depends']['fabricloader'] == '>=0.19.5'
-    for clazz in ['core/VehicleParking', 'entity/TruckEntity', 'entity/TruckExhaust', 'client/TruckRenderer', 'client/TruckAudio', 'client/TruckEngineSound', 'core/EngineFeedback', 'core/TruckFeedback', 'core/VehicleKind', 'core/VehicleGeometry', 'core/VehicleSaveCodec', 'entity/CargoScreenHandler', 'init/MilitarySounds','core/TrackDrive','core/VehicleOperations','core/ExpansionGeometry','entity/VehicleSystems','network/VehicleAction','core/FleetTuning','core/ServiceTargeting','config/FleetConfigFile','config/ServerFleetConfig','network/FleetSettingsPayload','client/ClientFleetSettings']:
+    for clazz in ['core/VehicleParking', 'core/ControlLatch', 'entity/TruckEntity', 'entity/TruckExhaust', 'client/TruckRenderer', 'client/TruckAudio', 'client/TruckEngineSound', 'core/EngineFeedback', 'core/TruckFeedback', 'core/VehicleKind', 'core/VehicleGeometry', 'core/VehicleSaveCodec', 'entity/CargoScreenHandler', 'init/MilitarySounds','core/TrackDrive','core/VehicleOperations','core/ExpansionGeometry','entity/VehicleSystems','network/VehicleAction','core/FleetTuning','core/ServiceTargeting','config/FleetConfigFile','config/ServerFleetConfig','network/FleetSettingsPayload','client/ClientFleetSettings']:
         assert f'com/prokstudio/militaryvehicles/{clazz}.class' in names, clazz
     assert b'net/minecraft/class_' in a.read('com/prokstudio/militaryvehicles/entity/TruckEntity.class'), 'Expected intermediary-remapped entity class'
     assert not any(n.startswith(('com/harvester/', 'ws/schild/')) or n.endswith(('.exe','.dll','.so','.dylib','.wav','.pcm')) for n in names)
