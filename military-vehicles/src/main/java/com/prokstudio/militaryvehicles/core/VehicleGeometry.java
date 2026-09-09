@@ -96,6 +96,19 @@ public final class VehicleGeometry {
         part(p,"headlamps","light",b(-9.6f,11.4f,25.55f,2.4f,2.4f,.25f),b(7.2f,11.4f,25.55f,2.4f,2.4f,.25f));
         part(p,"tail_light_mounts","dark",b(-10,10,-24.5f,3,4,1),b(7,10,-24.5f,3,4,1));
         part(p,"tail_lights","tail",b(-9.6f,11,-24.8f,2.2f,1.8f,.25f),b(7.4f,11,-24.8f,2.2f,1.8f,.25f));
+        // Long-travel running gear and the safety kit an open cockpit needs, all inboard of the tyres.
+        for(int axle=0;axle<2;axle++) {
+            float z0=axle==0?18:-18;String tag=axle==0?"front":"rear";
+            for(int side:new int[]{-1,1}) {
+                part(p,"a_arm_lower_"+tag+"_"+side,"metal",b(side<0?-10:3.2f,3,z0-1,6.8f,1,2));
+                part(p,"a_arm_upper_"+tag+"_"+side,"metal",b(side<0?-10:3.2f,10,z0-.8f,6.8f,1,1.6f));
+                part(p,"bump_stop_"+tag+"_"+side,"rubber",b(side<0?-9.6f:8.4f,4,z0-2.2f,1.2f,1,1.2f));
+            }
+        }
+        part(p,"track_rod","metal",b(-10,4.2f,15,20,.8f,.8f));
+        for(int side:new int[]{-1,1}) part(p,"harness_anchor_"+side,"metal",b(side<0?-9.9f:9,26,-7.8f,.9f,1,.9f));
+        part(p,"rack_fuel_can","olive",b(-8,21,-21,3,5,2));
+        part(p,"first_aid_box","sand",b(5,21,-21,4,3,2));
         return List.copyOf(p);
     }
     private static List<Part> carrier() {
@@ -146,6 +159,24 @@ public final class VehicleGeometry {
         part(p,"grab_rail_supports","metal",b(-.5f,37,-23,1,6,1),b(-.5f,37,17,1,6,1));
         part(p,"exhaust_stack","metal",b(-18.5f,18,-27,1.5f,21,1.5f),b(-18.5f,38,-28,1.5f,1.5f,2.5f));
         part(p,"exhaust_mounts","dark",b(-18.8f,24,-27.2f,2,.8f,2),b(-18.8f,34,-27.2f,2,.8f,2));
+        // Independent running gear on all four axles, ramp rams, smoke launchers and roof stowage.
+        String[] tags={"front","mid_front","mid_rear","rear"};float[] axles={26,10,-10,-26};
+        for(int axle=0;axle<axles.length;axle++) {
+            float z0=axles[axle];String tag=tags[axle];
+            for(int side:new int[]{-1,1}) {
+                part(p,"swing_arm_"+tag+"_"+side,"metal",b(side<0?-16:3.2f,3.4f,z0-1.2f,12.8f,1.4f,2.4f));
+                part(p,"torsion_bar_"+tag+"_"+side,"metal",b(side<0?-16:12.2f,8,z0-.8f,3.8f,1,1.6f));
+                part(p,"damper_"+tag+"_"+side,"dark",b(side<0?-14.6f:13.4f,5.4f,z0+1.8f,1.2f,2.6f,1.2f));
+            }
+        }
+        for(int side:new int[]{-1,1}) {
+            part(p,"ramp_actuator_"+side,"metal",b(side<0?-14:11,15,-36.2f,3,1.2f,1.2f));
+            part(p,"smoke_launcher_"+side,"dark",b(side<0?-20.5f:17.5f,36,24,3,3,2));
+            part(p,"smoke_tubes_"+side,"metal",b(side<0?-20.2f:17.8f,36.6f,26,2.4f,1.8f,.25f));
+        }
+        part(p,"stowage_basket","metal",b(-14,45,-32,24,1,4),b(-14,46,-32,1,2,4),b(9,46,-32,1,2,4),b(-13,47,-32,22,1,.8f));
+        part(p,"antenna_mount","dark",b(12,45,-30,3,1,3));
+        part(p,"whip_antenna","metal",b(13.2f,46,-28.8f,.6f,4,.6f));
         return List.copyOf(p);
     }
 }
