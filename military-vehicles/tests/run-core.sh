@@ -13,3 +13,4 @@ java -cp build/core-smoke com.prokstudio.militaryvehicles.OperationsSmoke
 bash tests/run-tuning.sh
 bash tests/run-parking.sh
 bash tests/run-controls.sh
+bash tests/run-service.sh
