@@ -14,8 +14,11 @@ javac --release 21 -d build/fleet-models \
   src/test/java/com/prokstudio/militaryvehicles/WheeledModelCases.java \
   src/test/java/com/prokstudio/militaryvehicles/WheeledModelSmoke.java \
   src/test/java/com/prokstudio/militaryvehicles/CargoBedModelCases.java \
-  src/test/java/com/prokstudio/militaryvehicles/CargoBedModelSmoke.java
+  src/test/java/com/prokstudio/militaryvehicles/CargoBedModelSmoke.java \
+  src/test/java/com/prokstudio/militaryvehicles/TroopBayModelCases.java \
+  src/test/java/com/prokstudio/militaryvehicles/TroopBayModelSmoke.java
 java -cp build/fleet-models com.prokstudio.militaryvehicles.FleetModelSmoke
 java -cp build/fleet-models com.prokstudio.militaryvehicles.ServiceModelSmoke
 java -cp build/fleet-models com.prokstudio.militaryvehicles.WheeledModelSmoke
 java -cp build/fleet-models com.prokstudio.militaryvehicles.CargoBedModelSmoke
+java -cp build/fleet-models com.prokstudio.militaryvehicles.TroopBayModelSmoke

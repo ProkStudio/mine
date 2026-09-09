@@ -177,6 +177,21 @@ public final class VehicleGeometry {
         part(p,"stowage_basket","metal",b(-14,45,-32,24,1,4),b(-14,46,-32,1,2,4),b(9,46,-32,1,2,4),b(-13,47,-32,22,1,.8f));
         part(p,"antenna_mount","dark",b(12,45,-30,3,1,3));
         part(p,"whip_antenna","metal",b(13.2f,46,-28.8f,.6f,4,.6f));
+        // Troop bay fit-out: centre gangway, ceiling rails, dome lights, kit racks, safety stores and ramp boarding aids.
+        part(p,"bay_walkway","metal",b(-6,15,-30,12,.7f,54));
+        part(p,"bay_first_aid_box","sand",b(-6,25,-31,5,3,2));
+        part(p,"bay_extinguisher_bracket","metal",b(.5f,24,-31,3,1,2));
+        part(p,"bay_extinguisher","tail",b(1,25,-31,2,5,2));
+        part(p,"ramp_step","metal",b(-6,7,-37.6f,12,1.2f,2.4f));
+        part(p,"ramp_step_arms","metal",b(-6,8.2f,-36.6f,1.5f,1.8f,1.5f),b(4.5f,8.2f,-36.6f,1.5f,1.8f,1.5f));
+        for(int side:new int[]{-1,1}) {
+            float rail=side<0?-14.2f:13.2f;
+            part(p,"troop_grab_rail_"+side,"metal",b(rail,41,-28,1,1,46),b(rail,42,-26,1,1,1),b(rail,42,-4,1,1,1),b(rail,42,16,1,1,1));
+            part(p,"bay_light_housing_"+side,"dark",b(side<0?-11:7,42,-14,4,1,6));
+            part(p,"bay_dome_light_"+side,"light",b(side<0?-10.5f:7.5f,41.5f,-13.5f,3,.5f,5));
+            part(p,"bay_kit_rack_"+side,"dark",b(side<0?-15:13.5f,25,-12,1.5f,4,9));
+            part(p,"ramp_grab_handle_"+side,"metal",b(side<0?-15:14,21,-36.2f,1,12,1));
+        }
         return List.copyOf(p);
     }
 }
