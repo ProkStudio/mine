@@ -11,6 +11,15 @@ public final class ExpansionGeometry {
     private static Box b(float x,float y,float z,float w,float h,float d) { return new Box(x,y,z,w,h,d); }
     private static void part(List<Part> p,String name,String material,Box... boxes) { p.add(new Part(name,material,0,0,0,false,false,List.of(boxes))); }
     private static void pivot(List<Part> p,String name,String material,float x,float y,float z,Box... boxes) { p.add(new Part(name,material,x,y,z,false,false,List.of(boxes))); }
+    /** Rotating ring kept inside its own rolling radius, so a full revolution never reaches the ground. */
+    private static void ring(List<Part> p,String name,String material,float x,float y,float z,int teeth,float radius,float half,float halfWidth) {
+        List<Box> boxes=new ArrayList<>();
+        for(int n=0;n<teeth;n++) {
+            double a=n*Math.PI*2/teeth;
+            boxes.add(b(-halfWidth,(float)Math.sin(a)*radius-half,(float)Math.cos(a)*radius-half,halfWidth*2,half*2,half*2));
+        }
+        p.add(new Part(name,material,x,y,z,true,false,boxes));
+    }
     public static List<Part> create(VehicleKind kind) {
         if(kind.tracked()) return tracked(kind);
         if(!kind.support()) throw new IllegalArgumentException("No expansion rig for "+kind);
@@ -96,6 +105,15 @@ public final class ExpansionGeometry {
                 p.add(new Part("wheel_hub_"+key,"metal",x,6.5f,z,true,false,List.of(b(-2.8f,-2.3f,-2.3f,5.6f,4.6f,4.6f),b(side*3-.2f,-.8f,-.8f,.4f,1.6f,1.6f))));
                 part(p,"suspension_arm_"+key,"dark",b(side<0?-23:16,6,z-1,7,2,2));
             }
+            // Completed running gear: driven sprocket at the engine end, tensioned idler at the front and rollers under the upper run.
+            ring(p,"sprocket_teeth_"+side,"metal",x,6.5f,-27,8,5.3f,.6f,3.4f);
+            ring(p,"idler_rim_"+side,"metal",x,6.5f,27,6,4.6f,.5f,3.2f);
+            for(int i=0;i<3;i++) p.add(new Part("return_roller_"+side+"_"+i,"metal",x,10.7f,-13.5f+i*18,true,false,
+                List.of(b(-2.6f,-1.4f,-1.4f,5.2f,2.8f,2.8f))));
+            part(p,"track_tensioner_"+side,"dark",b(side<0?-26:20,8,31.2f,6,3,3));
+            part(p,"track_scraper_"+side,"metal",b(side<0?-26.5f:20.5f,1.5f,-33.5f,6,4,1.5f));
+            part(p,"spare_track_links_"+side,"metal",b(side<0?-20:18,23,6,2,2.5f,18));
+            part(p,"hull_stowage_box_"+side,skin,b(side<0?-18:13,25,-14,5,3,12));
             part(p,"track_fender_"+side,skin,b(side<0?-28:18,14,-33,10,1.2f,66));
             for(int z:new int[]{-25,-7,11}) part(p,"side_skirt_"+side+"_"+z,skin,b(side<0?-28.5f:28,10,z,.5f,5,14));
         }
@@ -103,8 +121,11 @@ public final class ExpansionGeometry {
         part(p,"hull_deck",skin,b(-19,14,-33,38,8,65),b(-17,22,-31,34,3,60));
         part(p,"stepped_glacis",skin,b(-18,14,32,36,5,4),b(-16,19,30,32,4,5));
         part(p,"driver_hatch","dark",b(4,25,18,10,1,11));
+        part(p,"driver_hatch_handle","metal",b(7,26,22,4,.8f,1));
         part(p,"driver_periscope","glass",b(6,26,25,6,2,1.5f));
         part(p,"front_tow_lugs","metal",b(-14,12,35,3,4,2),b(11,12,35,3,4,2));
+        part(p,"rear_tow_lugs","metal",b(-14,12,-36,3,4,2),b(11,12,-36,3,4,2));
+        part(p,"rear_stowage_bins","dark",b(-11,17,-35.5f,10,6,1.5f),b(1,17,-35.5f,10,6,1.5f));
         part(p,"front_light_guards","dark",b(-18,21,30,5,4,2),b(13,21,30,5,4,2));
         part(p,"headlamps","light",b(-17.5f,21.5f,32.1f,4,3,.25f),b(13.5f,21.5f,32.1f,4,3,.25f));
         part(p,"tail_lights","tail",b(-17,17,-34.4f,4,2,.3f),b(13,17,-34.4f,4,2,.3f));
@@ -120,6 +141,9 @@ public final class ExpansionGeometry {
             pivot(p,"turret_platform","dark",0,TURRET_Y,TURRET_Z,b(-14,-1,-13,28,2,25));
             pivot(p,"turret_shield",skin,0,TURRET_Y,TURRET_Z,b(-14,1,9,10,14,2),b(4,1,9,10,14,2),b(-14,1,-6,2,11,15),b(12,1,-6,2,11,15));
             pivot(p,"turret_trunnions","metal",0,TURRET_Y,TURRET_Z,b(-5,2,5,2,8,5),b(3,2,5,2,8,5));
+            pivot(p,"turret_shield_optics","glass",0,TURRET_Y,TURRET_Z,b(5,10,11,4,2,.3f));
+            pivot(p,"turret_shield_antenna","metal",0,TURRET_Y,TURRET_Z,b(-13.5f,1,-12.5f,.4f,12,.4f));
+            part(p,"barrel_travel_lock","metal",b(-3,26,26,6,6,3));
             for(int side:new int[]{-1,1}) for(int z:new int[]{-28,27}) {
                 part(p,"outrigger_mount_"+side+"_"+z,"metal",b(side<0?-32:18,13,z-1,14,2,3),b(side*31-1.7f,8,z-1.7f,3.4f,6,3.4f));
                 pivot(p,"outrigger_leg_"+side+"_"+z,"dark",side*31,10,z,b(-1.3f,-4,-1.3f,2.6f,7,2.6f),b(-3,-5,-3,6,1,6));
