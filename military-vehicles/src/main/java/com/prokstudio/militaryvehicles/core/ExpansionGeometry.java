@@ -21,6 +21,7 @@ public final class ExpansionGeometry {
         p.add(new Part(name,material,x,y,z,true,false,boxes));
     }
     public static List<Part> create(VehicleKind kind) {
+        if(kind==VehicleKind.IFV) return ifv();
         if(kind.tracked()) return tracked(kind);
         if(!kind.support()) throw new IllegalArgumentException("No expansion rig for "+kind);
         List<Part> p=new ArrayList<>();
@@ -32,6 +33,92 @@ public final class ExpansionGeometry {
         }
         switch(kind) {case TANKER->tanker(p);case WORKSHOP->workshop(p);case RECOVERY->recovery(p);default->throw new AssertionError(kind);}
         serviceKit(kind,p);
+        return List.copyOf(p);
+    }
+    /** Autocannon fighting vehicle: tracked chassis, rear troop bay with firing ports, turret with ATGM pod. */
+    private static List<Part> ifv() {
+        List<Part> p=new ArrayList<>();String skin="armor";
+        for(int side:new int[]{-1,1}) {
+            float x=side*20;
+            // Same 54-unit loop as the heavy chassis, so the shared tread animation stays inside this band.
+            part(p,"track_band_"+side,"rubber",b(x-2.6f,0,-27,5.2f,.8f,54),b(x-2.6f,11.4f,-27,5.2f,.8f,54),
+                b(x-2.6f,1.5f,-31,5.2f,9,1.2f),b(x-2.6f,1.5f,29.8f,5.2f,9,1.2f),
+                b(x-2.6f,.6f,-29.8f,5.2f,1,3),b(x-2.6f,.6f,26.8f,5.2f,1,3),
+                b(x-2.6f,10.6f,-29.8f,5.2f,1,3),b(x-2.6f,10.6f,26.8f,5.2f,1,3));
+            for(boolean upper:new boolean[]{false,true}) for(int i=0;i<18;i++)
+                pivot(p,"tread_"+(upper?"upper_":"lower_")+side+"_"+i,"metal",x,upper?12.2f:.4f,-25.5f+i*3,
+                    b(-2.9f,-.35f,-1.15f,5.8f,.7f,2.3f));
+            for(int i=0;i<6;i++) {
+                float z=-25+i*10;String key=side+"_"+i;
+                p.add(new Part("wheel_"+key,"rubber",x,6.5f,z,true,false,List.of(
+                    b(-2.2f,-2.6f,-4,4.4f,5.2f,8),b(-2.2f,2.6f,-2.8f,4.4f,1.4f,5.6f),b(-2.2f,-4,-2.8f,4.4f,1.4f,5.6f))));
+                p.add(new Part("wheel_hub_"+key,"metal",x,6.5f,z,true,false,List.of(
+                    b(-2.5f,-2.3f,-2.3f,5,4.6f,4.6f),b(side*2.6f-.2f,-.8f,-.8f,.4f,1.6f,1.6f))));
+                part(p,"suspension_arm_"+key,"dark",b(side<0?-20:14,6,z-1,6,2,2));
+            }
+            ring(p,"sprocket_teeth_"+side,"metal",x,6.5f,-27,8,5.3f,.6f,2.9f);
+            ring(p,"idler_rim_"+side,"metal",x,6.5f,27,6,4.6f,.5f,2.7f);
+            for(int i=0;i<3;i++) p.add(new Part("return_roller_"+side+"_"+i,"metal",x,10.7f,-13.5f+i*18,true,false,
+                List.of(b(-2.4f,-1.3f,-1.3f,4.8f,2.6f,2.6f))));
+            part(p,"track_tensioner_"+side,"dark",b(side<0?-23:17,8,31.2f,6,3,3));
+            part(p,"track_scraper_"+side,"metal",b(side<0?-23.5f:17.5f,1.5f,-33.5f,6,4,1.5f));
+            part(p,"track_fender_"+side,skin,b(side<0?-25:15,13,-30,10,1.2f,60));
+            for(int z:new int[]{-24,-8,8}) part(p,"side_skirt_"+side+"_"+z,skin,b(side<0?-24.5f:24,9,z,.5f,6,15));
+            part(p,"spare_track_links_"+side,"metal",b(side<0?-17:15,22,4,2,2.5f,14));
+            part(p,"hull_stowage_box_"+side,skin,b(side<0?-15:10,23,-16,5,3,12));
+            // Firing ports and a grab rail: this compartment carries a squad, not cargo crates.
+            part(p,"firing_port_"+side,"glass",b(side<0?-16.2f:16,17,-22,.2f,3,3),b(side<0?-16.2f:16,17,-13,.2f,3,3));
+            part(p,"firing_port_frame_"+side,"metal",b(side<0?-16.55f:16.3f,16.4f,-22.4f,.25f,.6f,3.8f),
+                b(side<0?-16.55f:16.3f,20,-22.4f,.25f,.6f,3.8f),b(side<0?-16.55f:16.3f,16.4f,-13.4f,.25f,.6f,3.8f),
+                b(side<0?-16.55f:16.3f,20,-13.4f,.25f,.6f,3.8f));
+            part(p,"bay_grab_rail_"+side,"metal",b(side<0?-13.2f:12.2f,23,-29,1,1,17));
+            part(p,"bay_dome_light_"+side,"light",b(side<0?-11:8,24.4f,-24,3,.6f,6));
+        }
+        part(p,"lower_hull","dark",b(-15,10,-32,30,4,64));
+        part(p,"hull_deck",skin,b(-16,14,-31,32,8,62));
+        part(p,"hull_shoulder",skin,b(-14,22,-29,28,3,56));
+        part(p,"nose_plate","dark",b(-15,10,32,30,4,2));
+        part(p,"stepped_glacis",skin,b(-15,14,31,30,5,3),b(-13,19,29,26,3,4));
+        part(p,"driver_hatch","dark",b(4,25,15,10,1,10));
+        part(p,"driver_hatch_handle","metal",b(7,26,19,4,.8f,1));
+        part(p,"driver_periscope","glass",b(5,26,23,8,2,1.5f));
+        part(p,"driver_levers","metal",b(5,22,22,.7f,6,.7f),b(12,22,22,.7f,6,.7f));
+        part(p,"front_tow_lugs","metal",b(-12,12,33,3,4,2),b(9,12,33,3,4,2));
+        part(p,"rear_tow_lugs","metal",b(-12,12,-34,3,4,2),b(9,12,-34,3,4,2));
+        part(p,"front_light_guards","dark",b(-16,20,29,5,4,2),b(11,20,29,5,4,2));
+        part(p,"headlamps","light",b(-15.5f,20.5f,31.1f,4,3,.25f),b(11.5f,20.5f,31.1f,4,3,.25f));
+        part(p,"tail_lights","tail",b(-15,17,-32.4f,4,2,.3f),b(11,17,-32.4f,4,2,.3f));
+        for(int i=0;i<5;i++) part(p,"engine_grille_"+i,"dark",b(-11+i*4,25.05f,13,2,.5f,10));
+        part(p,"exhaust_stack","metal",b(-17.5f,17,22,1.5f,8,1.5f),b(-17.5f,24,20,1.5f,1.5f,3.5f));
+        part(p,"exhaust_guard","dark",b(-17.8f,19,21.7f,2.1f,.7f,2.1f));
+        part(p,"rear_ramp",skin,b(-10,14,-33.5f,20,12,1.5f));
+        part(p,"ramp_hinges","metal",b(-10,13,-32.4f,3,1.5f,2),b(7,13,-32.4f,3,1.5f,2));
+        part(p,"ramp_handle","metal",b(-2,20,-34,4,1,1));
+        part(p,"ramp_step","metal",b(-6,11,-35,12,1.2f,2));
+        part(p,"bay_roof_hatch","dark",b(-9,25.05f,-26,18,1,12));
+        part(p,"bay_hatch_handle","metal",b(-4,26,-22,8,.8f,1));
+        part(p,"turret_ring","dark",b(-9,25,-14,18,3,18));
+        for(int i=0;i<VehicleKind.IFV.seats.size();i++) {
+            var s=VehicleKind.IFV.seats.get(i);
+            part(p,"seat_"+i,"seat",b(s.x()-3.5f,s.topY()-3,s.z()-4,7,3,8),b(s.x()-3.5f,s.topY(),s.z()-4,7,7,1));
+        }
+        pivot(p,"turret_shell",skin,0,TURRET_Y,TURRET_Z,b(-9,0,-9,18,6,18),b(-8,6,-8,16,2,16),b(-7,0,7,14,5,3));
+        pivot(p,"turret_cheeks",skin,0,TURRET_Y,TURRET_Z,b(-9,0,5,3,6,5),b(6,0,5,3,6,5));
+        pivot(p,"turret_hatch","dark",0,TURRET_Y,TURRET_Z,b(-4,8,-6,8,1.5f,8));
+        pivot(p,"turret_hatch_handle","metal",0,TURRET_Y,TURRET_Z,b(-2,9.5f,-4,4,.7f,1));
+        pivot(p,"turret_optics","glass",0,TURRET_Y,TURRET_Z,b(4,4,9.9f,3,2,.3f));
+        pivot(p,"turret_sight_hood","dark",0,TURRET_Y,TURRET_Z,b(3.5f,6,9.4f,4,1,1.2f));
+        pivot(p,"turret_atgm_pod","dark",0,TURRET_Y,TURRET_Z,b(-13,2,-6,4,7,11));
+        pivot(p,"turret_atgm_tubes","metal",0,TURRET_Y,TURRET_Z,b(-12.6f,3,-6.4f,3.2f,1.8f,11.8f),b(-12.6f,5.6f,-6.4f,3.2f,1.8f,11.8f));
+        pivot(p,"turret_smoke_launchers","metal",0,TURRET_Y,TURRET_Z,b(-8,4,-10.5f,3,3,3),b(5,4,-10.5f,3,3,3));
+        pivot(p,"turret_stowage_basket","dark",0,TURRET_Y,TURRET_Z,b(-10,0,-14,20,4,4));
+        pivot(p,"turret_antenna","metal",0,TURRET_Y,TURRET_Z,b(8,6,-8,.4f,12,.4f));
+        pivot(p,"gun_mantlet",skin,0,GUN_Y,GUN_Z,b(-4,-4,-4,8,8,9));
+        pivot(p,"gun_breech","dark",0,GUN_Y,GUN_Z,b(-2.5f,-2.5f,-9,5,5,7));
+        pivot(p,"gun_barrel","metal",0,GUN_Y,GUN_Z,b(-1.1f,-1.1f,5,2.2f,2.2f,19));
+        pivot(p,"gun_barrel_sleeve",skin,0,GUN_Y,GUN_Z,b(-1.5f,-1.5f,5.5f,3,3,6));
+        pivot(p,"gun_muzzle_brake","dark",0,GUN_Y,GUN_Z,b(-1.7f,-1.7f,23,3.4f,3.4f,3));
+        pivot(p,"gun_coaxial","metal",0,GUN_Y,GUN_Z,b(3,-1,6,1.2f,1.2f,12));
         return List.copyOf(p);
     }
     private static Part roundWheel(Part p) {
