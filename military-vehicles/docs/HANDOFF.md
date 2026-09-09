@@ -4,22 +4,22 @@
 
 ## Текущее состояние
 
-**0.3.0-alpha.3: защита упаковки и одиночного поста на основе полной скорости и сухого контакта с землёй.** Грузовик, багги, БТР, танк, заправщик, мастерская, эвакуатор и самоходка сохранены. В alpha.2 добавлены 12 ограниченных настроек, административный reload, S2C-снимок для справки, точное обслуживание по первому физическому попаданию и задержка восстановления с учётом настроенной перезарядки. Это не stable и не закрытая игровая приёмка.
+**0.3.0-alpha.4: двигатель переключается только по настоящему нажатию G; зажатая клавиша после разрыва связи или очистки кресла требует отпускания.** В alpha.3 добавлена защита упаковки и одиночного поста по полной скорости и сухому контакту с землёй. Грузовик, багги, БТР, танк, заправщик, мастерская, эвакуатор и самоходка сохранены. В alpha.2 добавлены 12 ограниченных настроек, административный reload, S2C-снимок для справки, точное обслуживание по первому физическому попаданию и задержка восстановления с учётом настроенной перезарядки. Это не stable и не закрытая игровая приёмка.
 
-Начать с README и [PARKING-SAFETY](PARKING-SAFETY.md), затем [SERVER-RULES](SERVER-RULES.md). Новые guards не меняют формат v1 и не закрывают игровую QA. Исторический [TUNING-STATE](TUNING-STATE.json) фиксирует проверенный код, локальный прогон и две успешные clean CI-сборки `22a4e7ad0077fa270da00ce45867279b2c2c3c12`. Проверять Actions актуальной вершины и `verification.json`, а не переносить старые результаты автоматически.
+Начать с README и [ENGINE-INTENT](ENGINE-INTENT.md), затем [PARKING-SAFETY](PARKING-SAFETY.md) и [SERVER-RULES](SERVER-RULES.md). Новые guards не меняют формат v1 и не закрывают игровую QA. Исторический [TUNING-STATE](TUNING-STATE.json) фиксирует проверенный код, локальный прогон и две успешные clean CI-сборки `22a4e7ad0077fa270da00ce45867279b2c2c3c12`. Проверять Actions актуальной вершины и `verification.json`, а не переносить старые результаты автоматически.
 
 EXPANSION-ALPHA1 описывает парк и историю 0.3-alpha.1; цены в нём — defaults, не новые серверные настройки. WORKLOG/FLEET-ALPHA1/FEEDBACK-ALPHA2 — история; BUILD-REPORT.json относится только к 0.1.0-alpha.1 и не переписывался.
 
 ## Архитектура и обязательные регрессии
 
 - `VehicleKind` сохраняет восемь профилей. Общие `TruckEntity`/`TruckItem`/`TruckRenderer`; полные копии по типам не создавались.
-- `TrackDrive` — два гусеничных типа; `VehicleSystems` — серверные посты/опоры/операции/огонь; `VehicleOperations`, `ServiceTargeting` и `VehicleParking` — проверяемые чистые правила.
+- `TrackDrive` — два гусеничных типа; `VehicleSystems` — серверные посты/опоры/операции/огонь; `VehicleOperations`, `ServiceTargeting` и `VehicleParking` — проверяемые чистые правила. `ControlLatch` держит один пакет на тик, dead-man timeout и фронт нажатия двигателя: зажатая клавиша после разрыва или `reset()` требует отпускания и не создаёт нажатие.
 - `FleetTuning` — неизменяемый проверенный снимок. `FleetConfigFile` читает ограниченный UTF-8 файл и заменяет снимок только после успешной валидации. `ServerFleetConfig` владеет состоянием логического сервера; клиентский снимок только для отображения и сбрасывается между соединениями.
 - Сервер получает намерение, не цель/положение/урон. Нет C2S-пакета изменения конфигурации. Reload не сбрасывает активный cooldown; восстановление даёт не менее `max(100, настроенный интервал)`.
 - Geometry, registry ID, размеры, места, груз 9/18/27 и v1 не менялись. `fuelTicks` остаётся 0–9. Общий лимит постановки — 1–12, не отдельная квота на тип; звуковой бюджет 8 прежний.
-- **122 обязательных JUnit-метода**, включая все прежние 112. Шесть standalone-наборов. Gate нельзя ослаблять/пропускать ради зелёной сборки.
+- **133 обязательных JUnit-метода**, включая все прежние 122. Семь standalone-наборов. Gate нельзя ослаблять/пропускать ради зелёной сборки.
 
-Из корня: `bash military-vehicles/tests/run-core.sh`; `bash ./gradlew -p military-vehicles --no-daemon --console=plain --no-build-cache --rerun-tasks clean build`; `python3 military-vehicles/tools/verify_build.py`. JDK 21. Audio encoder build-only; опционально `-PtruckFfmpeg=/path/to/ffmpeg`. Отдельно: `bash military-vehicles/tests/run-parking.sh` и `bash military-vehicles/tests/run-tuning.sh`.
+Из корня: `bash military-vehicles/tests/run-core.sh`; `bash ./gradlew -p military-vehicles --no-daemon --console=plain --no-build-cache --rerun-tasks clean build`; `python3 military-vehicles/tools/verify_build.py`. JDK 21. Audio encoder build-only; опционально `-PtruckFfmpeg=/path/to/ffmpeg`. Отдельно: `bash military-vehicles/tests/run-controls.sh`, `bash military-vehicles/tests/run-parking.sh` и `bash military-vehicles/tests/run-tuning.sh`.
 
 ## Следующий содержательный шаг
 
